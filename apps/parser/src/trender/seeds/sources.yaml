@@ -1,0 +1,22 @@
+web:
+  - { value: "https://zenn.dev/topics/ai/feed", lang: "ja", stage: "active" }
+  - { value: "https://zenn.dev/topics/llm/feed", lang: "ja", stage: "active" }
+  - { value: "https://qiita.com/tags/ai/feed", lang: "ja", stage: "active" }
+  - { value: "https://qiita.com/tags/llm/feed", lang: "ja", stage: "active" }
+  - { value: "https://news.hada.io/rss/news", lang: "ko", stage: "active" }
+  - { value: "https://www.aitimes.com/rss/allArticle.xml", lang: "ko", stage: "active" }
+  - { value: "https://openai.com/news/rss.xml", lang: "en", stage: "active" }
+  - { value: "https://www.anthropic.com/news/rss.xml", lang: "en", stage: "active" }
+  - { value: "https://huggingface.co/blog/feed.xml", lang: "en", stage: "active" }
+
+keyword:
+  - { value: "Claude", stage: "active" }
+  - { value: "ChatGPT", stage: "active" }
+  - { value: "GPT", stage: "active" }
+  - { value: "LLM", stage: "active" }
+  - { value: "RAG", stage: "active" }
+  - { value: "에이전트", lang: "ko", stage: "active" }
+  - { value: "agent", lang: "en", stage: "active" }
+  - { value: "エージェント", lang: "ja", stage: "active" }
+  - { value: "MCP", stage: "active" }
+  - { value: "Ollama", stage: "active" }

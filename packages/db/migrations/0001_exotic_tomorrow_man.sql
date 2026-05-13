@@ -1,0 +1,1 @@
+ALTER TABLE `articles` MODIFY COLUMN `url` varchar(768) NOT NULL;

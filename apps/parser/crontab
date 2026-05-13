@@ -1,0 +1,8 @@
+SHELL=/bin/bash
+PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 * * * * /usr/local/bin/trender-run collect summarize >> /var/log/trender.log 2>&1
+30 0 * * * /usr/local/bin/trender-run report --kind daily >> /var/log/trender.log 2>&1
+0 1 * * 1 /usr/local/bin/trender-run report --kind weekly >> /var/log/trender.log 2>&1
+0 2 1 * * /usr/local/bin/trender-run report --kind monthly >> /var/log/trender.log 2>&1
+15 3 * * * /usr/local/bin/trender-run evolve >> /var/log/trender.log 2>&1
