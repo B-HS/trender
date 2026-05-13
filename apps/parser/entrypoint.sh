@@ -4,9 +4,29 @@ set -euo pipefail
 mkdir -p /var/log
 touch /var/log/trender.log
 
+# cron이 spawn하는 자식 프로세스는 컨테이너 env를 못 받으므로 파일로 dump해 둔다.
+{
+  for var in DATABASE_URL TZ LOG_LEVEL LLM_PROVIDERS \
+             OLLAMA_CLOUD_KEY OLLAMA_CLOUD_HOST OLLAMA_CLOUD_MODEL \
+             OLLAMA_HOST OLLAMA_LOCAL_MODEL \
+             OMLX_HOST OMLX_MODEL \
+             OPENROUTER_API_KEY OPENROUTER_MODEL OPENROUTER_HOST OPENROUTER_APP_TITLE OPENROUTER_REFERER \
+             OPENAI_OAUTH_MODEL OPENAI_OAUTH_BASE_URL OPENAI_OAUTH_TOKEN OPENAI_OAUTH_AUTH_FILE \
+             FETCH_CONCURRENCY FETCH_TIMEOUT_SECONDS FETCH_PER_SOURCE_LIMIT \
+             PLAYWRIGHT_BROWSERS_PATH CLOAKBROWSER_CACHE_DIR; do
+    if [ -n "${!var:-}" ]; then
+      printf 'export %s=%q\n' "$var" "${!var}"
+    fi
+  done
+} > /etc/trender.env
+chmod 600 /etc/trender.env
+
 cat > /usr/local/bin/trender-run <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ -f /etc/trender.env ]]; then
+  source /etc/trender.env
+fi
 shopt -s expand_aliases
 if [[ "${1:-}" == "report" ]]; then
   shift

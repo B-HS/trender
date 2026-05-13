@@ -18,17 +18,20 @@ log = get_logger(__name__)
 
 
 def _period_bounds(kind: ReportKind, ref: date) -> tuple[date, date]:
+    """ref(보통 cron 발행일) 기준으로 직전 마감된 기간을 돌려준다."""
     if kind == "daily":
-        return (ref, ref)
+        d = ref - timedelta(days=1)
+        return (d, d)
     if kind == "weekly":
-        start = ref - timedelta(days=ref.weekday())
-        return (start, start + timedelta(days=6))
-    first = ref.replace(day=1)
-    if first.month == 12:
-        next_first = first.replace(year=first.year + 1, month=1)
-    else:
-        next_first = first.replace(month=first.month + 1)
-    return (first, next_first - timedelta(days=1))
+        # 월요일 새벽에 발행되면 ref.weekday()==0, 지난주 월~일 구간을 리턴
+        end = ref - timedelta(days=ref.weekday() + 1)  # 지난주 일요일
+        start = end - timedelta(days=6)
+        return (start, end)
+    # monthly: 지난달 1일 ~ 말일
+    first_of_this = ref.replace(day=1)
+    end = first_of_this - timedelta(days=1)
+    start = end.replace(day=1)
+    return (start, end)
 
 
 def _rank_articles(articles: list[Article], top_k: int) -> list[Article]:

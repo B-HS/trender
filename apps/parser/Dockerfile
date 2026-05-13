@@ -8,9 +8,11 @@ ENV PYTHONUNBUFFERED=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     CLOAKBROWSER_CACHE_DIR=/var/cache/cloakbrowser
 
-# cron + tini + 한국어/일본어 폰트는 base 이미지에 일부 포함됨. 누락분 보강.
+# cron + tini + 한국어/일본어 폰트 + tzdata는 base 이미지에 일부 포함됨. 누락분 보강.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends cron tini fonts-noto-cjk \
+ && apt-get install -y --no-install-recommends cron tini fonts-noto-cjk tzdata \
+ && ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime \
+ && echo "Asia/Seoul" > /etc/timezone \
  && rm -rf /var/lib/apt/lists/*
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \

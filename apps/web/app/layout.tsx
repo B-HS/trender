@@ -2,6 +2,7 @@ import { Geist_Mono, Inter } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { QueryProvider } from "@/components/query-provider"
 import { SiteNav } from "@/components/site-nav"
 import { cn } from "@workspace/ui/lib/utils"
 
@@ -26,10 +27,12 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
     >
       <body>
         <ThemeProvider>
-          <div className="min-h-svh bg-background">
-            <SiteNav />
-            <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
-          </div>
+          <QueryProvider>
+            <div className="min-h-svh bg-background">
+              <SiteNav />
+              <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+            </div>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

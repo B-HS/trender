@@ -19,7 +19,23 @@ from trender.logging import get_logger
 
 log = get_logger(__name__)
 
-_SHORT_BODY_THRESHOLD = 400
+_SHORT_BODY_THRESHOLD = 800
+
+
+async def _maybe_enrich_body(url: str, rss_body: str | None) -> str | None:
+    """RSS 본문이 너무 짧으면 페이지를 직접 긁어서 더 긴 본문으로 교체."""
+    existing = (rss_body or "").strip()
+    if len(existing) >= _SHORT_BODY_THRESHOLD:
+        return existing or None
+    try:
+        full = await fetch_article_body(url)
+    except Exception as e:
+        log.info("collect.enrich_failed", url=url, error=str(e))
+        return existing or None
+    if full and len(full) > len(existing):
+        log.info("collect.enriched_inline", url=url, rss=len(existing), full=len(full))
+        return full
+    return existing or None
 
 
 async def _collect_one(source: Source, semaphore: asyncio.Semaphore) -> int:
@@ -34,12 +50,13 @@ async def _collect_one(source: Source, semaphore: asyncio.Semaphore) -> int:
         increment_source_stat(source.id, today, hit=len(items))
     new_count = 0
     for item in items:
+        body = await _maybe_enrich_body(item.url, item.content_original)
         article = Article(
             source_id=item.source_id,
             url=item.url,
             lang=item.lang,
             title_original=item.title_original,
-            content_original=item.content_original,
+            content_original=body,
             published_at=item.published_at,
         )
         article_id = insert_article_if_new(article)
@@ -50,6 +67,7 @@ async def _collect_one(source: Source, semaphore: asyncio.Semaphore) -> int:
 
 
 async def _enrich_short_articles(limit: int) -> int:
+    """과거에 짧게 들어간 기사를 따라잡기 위한 안전망. summary 유무 관계없이 본문이 짧으면 재시도."""
     candidates = fetch_articles_missing_summary(limit=limit)
     enriched = 0
     for article in candidates:
