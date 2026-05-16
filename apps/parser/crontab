@@ -1,10 +1,10 @@
 SHELL=/bin/bash
 PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# 수집은 매시간, 요약은 30분 오프셋으로 시간당 2회 → 시간당 최대 120건 요약
+# 수집은 매시간, 키워드 추출은 30분 오프셋으로 시간당 2회 → 시간당 최대 120건 처리
 0 * * * * /usr/local/bin/trender-run collect >> /var/log/trender.log 2>&1
-15,45 * * * * /usr/local/bin/trender-run summarize >> /var/log/trender.log 2>&1
+15,45 * * * * /usr/local/bin/trender-run keywords >> /var/log/trender.log 2>&1
+# 리포트는 ko/ja/en 3개 언어를 한 번에 생성 (일간/주간만)
 30 0 * * * /usr/local/bin/trender-run report --kind daily >> /var/log/trender.log 2>&1
 0 1 * * 1 /usr/local/bin/trender-run report --kind weekly >> /var/log/trender.log 2>&1
-0 2 1 * * /usr/local/bin/trender-run report --kind monthly >> /var/log/trender.log 2>&1
 15 3 * * * /usr/local/bin/trender-run evolve >> /var/log/trender.log 2>&1

@@ -6,7 +6,7 @@ from datetime import date
 from trender.config import get_settings
 from trender.db.models import Article, Source
 from trender.db.repositories import (
-    fetch_articles_missing_summary,
+    fetch_articles_missing_keywords,
     increment_source_stat,
     insert_article_if_new,
     list_active_sources,
@@ -67,8 +67,8 @@ async def _collect_one(source: Source, semaphore: asyncio.Semaphore) -> int:
 
 
 async def _enrich_short_articles(limit: int) -> int:
-    """과거에 짧게 들어간 기사를 따라잡기 위한 안전망. summary 유무 관계없이 본문이 짧으면 재시도."""
-    candidates = fetch_articles_missing_summary(limit=limit)
+    """과거에 짧게 들어간 기사를 따라잡기 위한 안전망. 키워드 추출 전이고 본문이 짧으면 재시도."""
+    candidates = fetch_articles_missing_keywords(limit=limit)
     enriched = 0
     for article in candidates:
         existing = (article.content_original or "").strip()

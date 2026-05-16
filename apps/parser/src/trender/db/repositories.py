@@ -7,6 +7,7 @@ from trender.db.connection import cursor
 from trender.db.models import (
     Article,
     KeywordExtracted,
+    Lang,
     Report,
     ReportItem,
     Source,
@@ -71,12 +72,15 @@ def insert_article_if_new(article: Article) -> int | None:
         return None
 
 
-def fetch_articles_missing_summary(limit: int = 50) -> list[Article]:
+def fetch_articles_missing_keywords(limit: int = 50) -> list[Article]:
+    """키워드 미추출(keywords_extracted_at IS NULL) 기사를 본문이 있는 것만 가져온다."""
     with cursor() as cur:
         cur.execute(
             """
             SELECT * FROM articles
-            WHERE summary_ko IS NULL
+            WHERE keywords_extracted_at IS NULL
+              AND content_original IS NOT NULL
+              AND CHAR_LENGTH(content_original) > 0
             ORDER BY fetched_at DESC
             LIMIT %s
             """,
@@ -85,11 +89,11 @@ def fetch_articles_missing_summary(limit: int = 50) -> list[Article]:
         return [Article(**row) for row in cur.fetchall()]  # type: ignore[arg-type]
 
 
-def update_article_summary(article_id: int, title_ko: str, summary_ko: str) -> None:
+def mark_article_keywords_extracted(article_id: int) -> None:
     with cursor() as cur:
         cur.execute(
-            "UPDATE articles SET title_ko=%s, summary_ko=%s WHERE id=%s",
-            (title_ko, summary_ko, article_id),
+            "UPDATE articles SET keywords_extracted_at = NOW() WHERE id = %s",
+            (article_id,),
         )
 
 
@@ -102,26 +106,30 @@ def update_article_content(article_id: int, content_original: str) -> None:
 
 
 def insert_keywords(article_id: int, keywords: Iterable[KeywordExtracted]) -> None:
-    rows = [(article_id, k.keyword_ko, k.keyword_original, k.score) for k in keywords]
+    rows = [(article_id, k.keyword, k.score) for k in keywords]
     if not rows:
         return
     with cursor() as cur:
         cur.executemany(
-            "INSERT INTO keywords_extracted (article_id, keyword_ko, keyword_original, score) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO keywords_extracted (article_id, keyword, score) VALUES (%s, %s, %s)",
             rows,
         )
 
 
-def fetch_articles_in_range(start: datetime, end: datetime) -> list[Article]:
+def fetch_articles_in_range(start: datetime, end: datetime, lang: Lang | None = None) -> list[Article]:
+    sql = """
+        SELECT * FROM articles
+        WHERE COALESCE(published_at, fetched_at) BETWEEN %s AND %s
+          AND content_original IS NOT NULL
+          AND CHAR_LENGTH(content_original) > 0
+    """
+    params: tuple = (start, end)
+    if lang is not None:
+        sql += " AND lang = %s"
+        params = (start, end, lang)
+    sql += " ORDER BY COALESCE(published_at, fetched_at) DESC"
     with cursor() as cur:
-        cur.execute(
-            """
-            SELECT * FROM articles
-            WHERE COALESCE(published_at, fetched_at) BETWEEN %s AND %s
-            ORDER BY COALESCE(published_at, fetched_at) DESC
-            """,
-            (start, end),
-        )
+        cur.execute(sql, params)
         return [Article(**row) for row in cur.fetchall()]  # type: ignore[arg-type]
 
 
@@ -129,14 +137,14 @@ def insert_report(report: Report) -> int:
     with cursor() as cur:
         cur.execute(
             """
-            INSERT INTO reports (kind, period_start, period_end, title_ko, markdown_ko)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO reports (kind, lang, period_start, period_end, title, markdown)
+            VALUES (%s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
-              title_ko = VALUES(title_ko),
-              markdown_ko = VALUES(markdown_ko),
+              title = VALUES(title),
+              markdown = VALUES(markdown),
               id = LAST_INSERT_ID(id)
             """,
-            (report.kind, report.period_start, report.period_end, report.title_ko, report.markdown_ko),
+            (report.kind, report.lang, report.period_start, report.period_end, report.title, report.markdown),
         )
         return int(cur.lastrowid)
 
@@ -191,16 +199,22 @@ def stats_summary_for_source(source_id: int, days: int) -> dict[str, int]:
         return {"hits": int(row.get("hits", 0)), "adoptions": int(row.get("adoptions", 0))}  # type: ignore[union-attr]
 
 
-def candidate_keyword_frequencies(min_count: int = 3, days: int = 14) -> list[tuple[str, str | None, int]]:
+def candidate_keyword_frequencies(
+    lang: Lang, min_count: int = 3, days: int = 14
+) -> list[tuple[str, int]]:
+    """언어별 키워드 빈도. articles와 조인해 해당 언어 기사에서 추출된 키워드만 집계."""
     with cursor() as cur:
         cur.execute(
             """
-            SELECT keyword_ko, MAX(keyword_original) AS keyword_original, COUNT(*) AS cnt
-            FROM keywords_extracted
-            WHERE created_at >= (NOW() - INTERVAL %s DAY)
-            GROUP BY keyword_ko
+            SELECT k.keyword, COUNT(*) AS cnt
+            FROM keywords_extracted k
+            INNER JOIN articles a ON a.id = k.article_id
+            WHERE a.lang = %s
+              AND k.created_at >= (NOW() - INTERVAL %s DAY)
+            GROUP BY k.keyword
             HAVING cnt >= %s
+            ORDER BY cnt DESC
             """,
-            (days, min_count),
+            (lang, days, min_count),
         )
-        return [(r["keyword_ko"], r["keyword_original"], int(r["cnt"])) for r in cur.fetchall()]  # type: ignore[index]
+        return [(r["keyword"], int(r["cnt"])) for r in cur.fetchall()]  # type: ignore[index]

@@ -1,20 +1,17 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { eq } from 'drizzle-orm'
-import { articles, sources } from '@workspace/db'
+import { desc, eq } from 'drizzle-orm'
+import { articles, keywordsExtracted, sources } from '@workspace/db'
 import { db } from '@/lib/db'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Separator } from '@workspace/ui/components/separator'
-import { Markdown } from '@/components/markdown'
 
 export const dynamic = 'force-dynamic'
 
-const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '일본어', en: '영어' }
-
-const formatDateTime = (d: Date | string) =>
-    new Date(d).toLocaleString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
+const LOCALE_BY_LANG: Record<string, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' }
 
 const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params
@@ -28,10 +25,9 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             lang: articles.lang,
             titleOriginal: articles.titleOriginal,
             contentOriginal: articles.contentOriginal,
-            titleKo: articles.titleKo,
-            summaryKo: articles.summaryKo,
             publishedAt: articles.publishedAt,
             fetchedAt: articles.fetchedAt,
+            keywordsExtractedAt: articles.keywordsExtractedAt,
             sourceKind: sources.kind,
             sourceValue: sources.value,
         })
@@ -43,10 +39,17 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     const article = rows[0]
     if (!article) notFound()
 
+    const keywords = await db
+        .select({ keyword: keywordsExtracted.keyword, score: keywordsExtracted.score })
+        .from(keywordsExtracted)
+        .where(eq(keywordsExtracted.articleId, article.id))
+        .orderBy(desc(keywordsExtracted.score))
+
+    const locale = LOCALE_BY_LANG[article.lang] ?? 'ko-KR'
     const displayDate = article.publishedAt ?? article.fetchedAt
     const displayDateIso = new Date(displayDate).toISOString()
-    const titleKo = article.titleKo
-    const hasTranslation = titleKo && titleKo !== article.titleOriginal
+    const formatDateTime = (d: Date | string) =>
+        new Date(d).toLocaleString(locale, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 
     return (
         <div className='flex flex-col gap-8 sm:gap-10'>
@@ -65,8 +68,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                         {formatDateTime(displayDate)}
                     </time>
                 </div>
-                <h1 className='text-2xl leading-tight font-semibold sm:text-3xl'>{titleKo || article.titleOriginal}</h1>
-                {hasTranslation ? <p className='text-muted-foreground text-sm'>{article.titleOriginal}</p> : null}
+                <h1 className='text-2xl leading-tight font-semibold sm:text-3xl'>{article.titleOriginal}</h1>
                 <div className='flex flex-wrap items-center gap-2 pt-1'>
                     <Button asChild size='sm' variant='outline'>
                         <a href={article.url} target='_blank' rel='noreferrer noopener'>
@@ -77,16 +79,24 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             </div>
 
             <section className='flex flex-col gap-3'>
-                <h2 className='text-xl font-semibold'>한국어 정리</h2>
-                {article.summaryKo ? (
-                    <Card>
-                        <CardContent>
-                            <Markdown source={article.summaryKo} />
-                        </CardContent>
-                    </Card>
+                <div className='flex items-baseline gap-2'>
+                    <h2 className='text-xl font-semibold'>추출된 키워드</h2>
+                    <span className='text-muted-foreground text-sm'>{keywords.length}개</span>
+                </div>
+                {keywords.length > 0 ? (
+                    <div className='flex flex-wrap gap-1.5'>
+                        {keywords.map((k) => (
+                            <Badge key={k.keyword} variant='outline' className='font-normal'>
+                                {k.keyword}
+                                <span className='text-muted-foreground/70 ml-1 text-xs'>·{k.score}</span>
+                            </Badge>
+                        ))}
+                    </div>
                 ) : (
                     <Card className='border-dashed'>
-                        <CardContent className='text-muted-foreground/70 text-sm italic'>아직 요약이 생성되지 않았습니다.</CardContent>
+                        <CardContent className='text-muted-foreground/70 text-sm italic'>
+                            {article.keywordsExtractedAt ? '키워드가 비어 있습니다.' : '키워드 추출 대기 중입니다.'}
+                        </CardContent>
                     </Card>
                 )}
             </section>
@@ -97,7 +107,9 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 <div className='flex items-baseline gap-2'>
                     <h2 className='text-xl font-semibold'>원문</h2>
                     {article.contentOriginal ? (
-                        <span className='text-muted-foreground text-xs tabular-nums'>{article.contentOriginal.length.toLocaleString('ko-KR')}자</span>
+                        <span className='text-muted-foreground text-xs tabular-nums'>
+                            {article.contentOriginal.length.toLocaleString('ko-KR')}자
+                        </span>
                     ) : null}
                 </div>
                 {article.contentOriginal ? (

@@ -9,7 +9,7 @@ from trender.llm.base import LLMClient, LLMError
 class OllamaCloudClient(LLMClient):
     name = "ollama-cloud"
 
-    def __init__(self, *, api_key: str, host: str, model: str, timeout: float = 60.0) -> None:
+    def __init__(self, *, api_key: str, host: str, model: str, timeout: float = 600.0) -> None:
         if not api_key:
             raise LLMError("OLLAMA_CLOUD_KEY is empty")
         self._host = host.rstrip("/")
@@ -22,7 +22,7 @@ class OllamaCloudClient(LLMClient):
 
     @retry(
         reraise=True,
-        stop=stop_after_attempt(3),
+        stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=10),
         retry=retry_if_exception_type((httpx.TransportError, httpx.HTTPStatusError)),
     )

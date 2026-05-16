@@ -15,7 +15,7 @@ const fontMono = Geist_Mono({
 
 export const metadata = {
   title: "Trender — AI 트렌드 자동 수집",
-  description: "한·일·영 AI 트렌드를 자동 수집·요약·진화시키는 리포트 대시보드",
+  description: "한·일·영 AI 트렌드를 자동 수집하고 언어별 리포트를 생성하는 대시보드",
 }
 
 const RootLayout = ({ children }: { children: React.ReactNode }) => {

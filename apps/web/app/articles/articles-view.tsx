@@ -153,7 +153,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                         type='search'
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
-                        placeholder='제목·요약 검색…'
+                        placeholder='제목·키워드 검색…'
                         className='border-border bg-background placeholder:text-muted-foreground/60 focus:ring-ring/40 h-8 w-full rounded-none border px-3 text-sm outline-none focus:ring-1'
                     />
                     {isFiltered ? (

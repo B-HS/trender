@@ -15,6 +15,20 @@
       "when": 1778656047618,
       "tag": "0001_exotic_tomorrow_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1778912763288,
+      "tag": "0002_reset_for_keywords_and_lang",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1778915618928,
+      "tag": "0003_drop_monthly_kind",
+      "breakpoints": true
     }
   ]
 }

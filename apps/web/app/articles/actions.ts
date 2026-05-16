@@ -1,7 +1,7 @@
 'use server'
 
-import { and, desc, eq, like, lt, or, type SQL } from 'drizzle-orm'
-import { articles, sources } from '@workspace/db'
+import { and, desc, eq, inArray, like, lt, or, sql, type SQL } from 'drizzle-orm'
+import { articles, keywordsExtracted, sources } from '@workspace/db'
 import { db } from '@/lib/db'
 
 export type ArticleCursor = { fetchedAt: string; id: number }
@@ -20,8 +20,7 @@ export type ArticleRow = {
     url: string
     lang: Lang
     titleOriginal: string
-    titleKo: string | null
-    summaryKo: string | null
+    keywords: string[]
     publishedAt: string | null
     fetchedAt: string
 }
@@ -56,7 +55,10 @@ export const loadArticles = async (query: ArticleQuery): Promise<LoadArticlesRes
     if (sourceId) conds.push(eq(articles.sourceId, sourceId))
     if (q && q.trim()) {
         const pattern = `%${escapeLike(q.trim())}%`
-        const search = or(like(articles.titleOriginal, pattern), like(articles.titleKo, pattern), like(articles.summaryKo, pattern))
+        const search = or(
+            like(articles.titleOriginal, pattern),
+            sql`EXISTS (SELECT 1 FROM ${keywordsExtracted} ke WHERE ke.article_id = ${articles.id} AND ke.keyword LIKE ${pattern})`,
+        )
         if (search) conds.push(search)
     }
 
@@ -69,8 +71,6 @@ export const loadArticles = async (query: ArticleQuery): Promise<LoadArticlesRes
             url: articles.url,
             lang: articles.lang,
             titleOriginal: articles.titleOriginal,
-            titleKo: articles.titleKo,
-            summaryKo: articles.summaryKo,
             publishedAt: articles.publishedAt,
             fetchedAt: articles.fetchedAt,
         })
@@ -82,14 +82,34 @@ export const loadArticles = async (query: ArticleQuery): Promise<LoadArticlesRes
     const hasMore = rows.length > PAGE_SIZE
     const sliced = hasMore ? rows.slice(0, PAGE_SIZE) : rows
 
+    const articleIds = sliced.map((r) => r.id)
+    const keywordRows =
+        articleIds.length > 0
+            ? await db
+                  .select({
+                      articleId: keywordsExtracted.articleId,
+                      keyword: keywordsExtracted.keyword,
+                      score: keywordsExtracted.score,
+                  })
+                  .from(keywordsExtracted)
+                  .where(inArray(keywordsExtracted.articleId, articleIds))
+                  .orderBy(desc(keywordsExtracted.score))
+            : []
+
+    const keywordsByArticle = new Map<number, string[]>()
+    for (const k of keywordRows) {
+        const list = keywordsByArticle.get(k.articleId) ?? []
+        if (list.length < 6) list.push(k.keyword)
+        keywordsByArticle.set(k.articleId, list)
+    }
+
     const items: ArticleRow[] = sliced.map((r) => ({
         id: r.id,
         sourceId: r.sourceId,
         url: r.url,
         lang: r.lang,
         titleOriginal: r.titleOriginal,
-        titleKo: r.titleKo,
-        summaryKo: r.summaryKo,
+        keywords: keywordsByArticle.get(r.id) ?? [],
         publishedAt: r.publishedAt ? new Date(r.publishedAt).toISOString() : null,
         fetchedAt: new Date(r.fetchedAt).toISOString(),
     }))

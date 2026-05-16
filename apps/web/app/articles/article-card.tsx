@@ -4,20 +4,8 @@ import { Badge } from '@workspace/ui/components/badge'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import type { ArticleRow } from './actions'
 
-const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '일본어', en: '영어' }
-
-const stripMarkdown = (text: string) =>
-    text
-        .replace(/```[\s\S]*?```/g, ' ')
-        .replace(/`([^`]+)`/g, '$1')
-        .replace(/^#+\s*/gm, '')
-        .replace(/\*\*([^*]+)\*\*/g, '$1')
-        .replace(/\*([^*]+)\*/g, '$1')
-        .replace(/^[-*+]\s+/gm, '')
-        .replace(/^\d+\.\s+/gm, '')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-        .replace(/\s*\n+\s*/g, ' ')
-        .trim()
+const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
+const LOCALE_BY_LANG: Record<string, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' }
 
 type ArticleCardProps = {
     article: ArticleRow
@@ -25,6 +13,7 @@ type ArticleCardProps = {
 
 export const ArticleCard: FC<ArticleCardProps> = ({ article: a }) => {
     const displayDate = a.publishedAt ?? a.fetchedAt
+    const locale = LOCALE_BY_LANG[a.lang] ?? 'ko-KR'
     return (
         <Card className='group hover:border-foreground/20 overflow-hidden transition-all duration-200 hover:shadow-sm'>
             <CardHeader className='gap-2 pb-2'>
@@ -33,24 +22,27 @@ export const ArticleCard: FC<ArticleCardProps> = ({ article: a }) => {
                         {LANG_LABEL[a.lang] ?? a.lang}
                     </Badge>
                     <time className='text-muted-foreground text-xs tabular-nums' dateTime={displayDate}>
-                        {new Date(displayDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        {new Date(displayDate).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })}
                     </time>
                 </div>
                 <CardTitle className='text-base leading-snug'>
                     <Link
                         href={`/articles/${a.id}`}
                         className='wrap-break-word group-hover:text-foreground/90 transition-colors hover:underline'>
-                        {a.titleKo || a.titleOriginal}
+                        {a.titleOriginal}
                     </Link>
                 </CardTitle>
-                {a.titleKo && a.titleOriginal !== a.titleKo ? (
-                    <p className='text-muted-foreground/70 line-clamp-1 text-xs'>{a.titleOriginal}</p>
-                ) : null}
             </CardHeader>
-            {a.summaryKo ? (
-                <CardContent className='text-muted-foreground line-clamp-3 text-sm leading-relaxed'>{stripMarkdown(a.summaryKo)}</CardContent>
+            {a.keywords.length > 0 ? (
+                <CardContent className='flex flex-wrap gap-1.5 pt-0'>
+                    {a.keywords.map((k) => (
+                        <Badge key={k} variant='outline' className='font-normal'>
+                            {k}
+                        </Badge>
+                    ))}
+                </CardContent>
             ) : (
-                <CardContent className='text-muted-foreground/50 text-xs italic'>아직 요약 대기 중</CardContent>
+                <CardContent className='text-muted-foreground/50 text-xs italic'>키워드 추출 대기 중</CardContent>
             )}
             <CardFooter className='flex justify-end pt-2'>
                 <a

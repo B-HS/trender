@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 SourceKind = Literal["keyword", "web"]
 SourceStage = Literal["candidate", "active", "demoted"]
 Lang = Literal["ko", "ja", "en"]
-ReportKind = Literal["daily", "weekly", "monthly"]
+ReportKind = Literal["daily", "weekly"]
 
 
 class _Base(BaseModel):
@@ -33,27 +33,26 @@ class Article(_Base):
     lang: Lang
     title_original: str
     content_original: str | None = None
-    title_ko: str | None = None
-    summary_ko: str | None = None
     published_at: datetime | None = None
     fetched_at: datetime | None = None
+    keywords_extracted_at: datetime | None = None
 
 
 class KeywordExtracted(_Base):
     id: int | None = None
     article_id: int
-    keyword_ko: str
-    keyword_original: str | None = None
+    keyword: str
     score: int = 1
 
 
 class Report(_Base):
     id: int | None = None
     kind: ReportKind
+    lang: Lang
     period_start: date
     period_end: date
-    title_ko: str
-    markdown_ko: str
+    title: str
+    markdown: str
     created_at: datetime | None = None
 
 
