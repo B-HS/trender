@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import re
 from datetime import datetime, timezone
 from time import mktime
+from urllib.parse import urljoin
 
 import feedparser
 import httpx
 from bs4 import BeautifulSoup
-from markdownify import markdownify
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from trender.config import get_settings
@@ -20,16 +19,33 @@ log = get_logger(__name__)
 _USER_AGENT = "Mozilla/5.0 trender/0.1 (+https://github.com/) feedparser"
 
 
-def _html_to_markdown(html: str | None) -> str | None:
-    """RSS 본문 HTML 을 마크다운으로 변환. 이미지/링크/리스트/제목/굵게/기울임/코드 보존."""
+def _clean_html(html: str | None, base_url: str | None = None) -> str | None:
+    """RSS 본문 HTML 의 노이즈 태그 제거 + 상대→절대 URL 보강. 본문 구조는 유지."""
     if not html:
         return None
     soup = BeautifulSoup(html, "lxml")
-    for tag in soup(["script", "style", "noscript", "iframe", "form"]):
+
+    for tag in soup(["script", "style", "noscript", "iframe", "form", "object", "embed"]):
         tag.decompose()
-    md = markdownify(str(soup), heading_style="ATX", bullets="-", strip=["script", "style"])
-    md = re.sub(r"\n{3,}", "\n\n", md).strip()
-    return md or None
+
+    if base_url:
+        for img in soup.find_all("img"):
+            src = (img.get("src") or "").strip()
+            if src and not src.startswith(("http://", "https://", "data:", "//")):
+                img["src"] = urljoin(base_url, src)
+            elif src.startswith("//"):
+                img["src"] = "https:" + src
+        for a in soup.find_all("a"):
+            href = (a.get("href") or "").strip()
+            if href and not href.startswith(("http://", "https://", "mailto:", "tel:", "#")):
+                a["href"] = urljoin(base_url, href)
+
+    body = soup.body
+    if body is not None:
+        out = "".join(str(c) for c in body.contents).strip()
+    else:
+        out = str(soup).strip()
+    return out or None
 
 
 def _parse_published(entry: dict) -> datetime | None:
@@ -87,10 +103,10 @@ async def fetch_rss(source: Source) -> list[FetchedItem]:
         title = entry.get("title")
         if not link or not title:
             continue
-        body = _html_to_markdown(entry.get("summary") or entry.get("description"))
+        body = _clean_html(entry.get("summary") or entry.get("description"), base_url=link)
         if entry.get("content"):
             try:
-                body = _html_to_markdown(entry["content"][0].get("value")) or body
+                body = _clean_html(entry["content"][0].get("value"), base_url=link) or body
             except (KeyError, IndexError, AttributeError):
                 pass
         items.append(

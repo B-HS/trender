@@ -7,7 +7,7 @@ import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Separator } from '@workspace/ui/components/separator'
-import { Markdown } from '@/components/markdown'
+import { ArticleHtml } from '@/components/article-html'
 
 export const dynamic = 'force-dynamic'
 
@@ -119,7 +119,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                             <CardTitle className='text-base leading-snug'>{article.titleOriginal}</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <Markdown source={article.contentOriginal} />
+                            <ArticleHtml html={article.contentOriginal} />
                         </CardContent>
                     </Card>
                 ) : (
