@@ -30,8 +30,17 @@ async def _try_httpx(url: str, timeout: float) -> tuple[str | None, bool]:
 
 
 def _extract_main_text(html: str, url: str) -> str | None:
+    """본문을 마크다운으로 추출. 이미지·링크 보존."""
     try:
-        text = trafilatura.extract(html, url=url, include_links=False, include_images=False, favor_recall=True)
+        text = trafilatura.extract(
+            html,
+            url=url,
+            output_format="markdown",
+            include_links=True,
+            include_images=True,
+            include_formatting=True,
+            favor_recall=True,
+        )
         if text:
             return text.strip()
     except Exception as e:

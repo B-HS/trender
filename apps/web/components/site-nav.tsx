@@ -13,9 +13,6 @@ export const SiteNav = () => {
         <Link href="/articles" className="text-muted-foreground hover:text-foreground">
           기사
         </Link>
-        <Link href="/sources" className="text-muted-foreground hover:text-foreground">
-          소스 진화
-        </Link>
       </nav>
     </header>
   )

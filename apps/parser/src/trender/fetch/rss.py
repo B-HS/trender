@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from time import mktime
 
 import feedparser
 import httpx
 from bs4 import BeautifulSoup
+from markdownify import markdownify
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from trender.config import get_settings
@@ -18,10 +20,16 @@ log = get_logger(__name__)
 _USER_AGENT = "Mozilla/5.0 trender/0.1 (+https://github.com/) feedparser"
 
 
-def _strip_html(html: str | None) -> str | None:
+def _html_to_markdown(html: str | None) -> str | None:
+    """RSS 본문 HTML 을 마크다운으로 변환. 이미지/링크/리스트/제목/굵게/기울임/코드 보존."""
     if not html:
         return None
-    return BeautifulSoup(html, "lxml").get_text(separator=" ", strip=True)
+    soup = BeautifulSoup(html, "lxml")
+    for tag in soup(["script", "style", "noscript", "iframe", "form"]):
+        tag.decompose()
+    md = markdownify(str(soup), heading_style="ATX", bullets="-", strip=["script", "style"])
+    md = re.sub(r"\n{3,}", "\n\n", md).strip()
+    return md or None
 
 
 def _parse_published(entry: dict) -> datetime | None:
@@ -79,10 +87,10 @@ async def fetch_rss(source: Source) -> list[FetchedItem]:
         title = entry.get("title")
         if not link or not title:
             continue
-        body = _strip_html(entry.get("summary") or entry.get("description"))
+        body = _html_to_markdown(entry.get("summary") or entry.get("description"))
         if entry.get("content"):
             try:
-                body = _strip_html(entry["content"][0].get("value")) or body
+                body = _html_to_markdown(entry["content"][0].get("value")) or body
             except (KeyError, IndexError, AttributeError):
                 pass
         items.append(

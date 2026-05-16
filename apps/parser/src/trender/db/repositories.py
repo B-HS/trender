@@ -199,22 +199,3 @@ def stats_summary_for_source(source_id: int, days: int) -> dict[str, int]:
         return {"hits": int(row.get("hits", 0)), "adoptions": int(row.get("adoptions", 0))}  # type: ignore[union-attr]
 
 
-def candidate_keyword_frequencies(
-    lang: Lang, min_count: int = 3, days: int = 14
-) -> list[tuple[str, int]]:
-    """언어별 키워드 빈도. articles와 조인해 해당 언어 기사에서 추출된 키워드만 집계."""
-    with cursor() as cur:
-        cur.execute(
-            """
-            SELECT k.keyword, COUNT(*) AS cnt
-            FROM keywords_extracted k
-            INNER JOIN articles a ON a.id = k.article_id
-            WHERE a.lang = %s
-              AND k.created_at >= (NOW() - INTERVAL %s DAY)
-            GROUP BY k.keyword
-            HAVING cnt >= %s
-            ORDER BY cnt DESC
-            """,
-            (lang, days, min_count),
-        )
-        return [(r["keyword"], int(r["cnt"])) for r in cur.fetchall()]  # type: ignore[index]
