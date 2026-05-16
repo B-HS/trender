@@ -7,6 +7,7 @@ import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Separator } from '@workspace/ui/components/separator'
+import { Markdown } from '@/components/markdown'
 
 export const dynamic = 'force-dynamic'
 
@@ -117,8 +118,8 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                         <CardHeader className='gap-1 pb-3'>
                             <CardTitle className='text-base leading-snug'>{article.titleOriginal}</CardTitle>
                         </CardHeader>
-                        <CardContent className='text-foreground/90 text-sm leading-7 whitespace-pre-wrap'>
-                            {article.contentOriginal}
+                        <CardContent>
+                            <Markdown source={article.contentOriginal} />
                         </CardContent>
                     </Card>
                 ) : (
