@@ -29,7 +29,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             publishedAt: articles.publishedAt,
             fetchedAt: articles.fetchedAt,
             keywordsExtractedAt: articles.keywordsExtractedAt,
-            sourceKind: sources.kind,
             sourceValue: sources.value,
         })
         .from(articles)
@@ -62,7 +61,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                     <Badge variant='secondary'>{LANG_LABEL[article.lang] ?? article.lang}</Badge>
                     {article.sourceValue ? (
                         <Badge variant='outline' className='font-normal'>
-                            {article.sourceKind === 'keyword' ? '키워드' : '웹'} · {article.sourceValue}
+                            {article.sourceValue}
                         </Badge>
                     ) : null}
                     <time className='text-muted-foreground text-sm tabular-nums' dateTime={displayDateIso}>

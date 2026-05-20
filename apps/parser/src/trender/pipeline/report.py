@@ -8,6 +8,7 @@ from trender.db.repositories import (
     increment_source_stat,
     insert_report,
     replace_report_items,
+    report_exists,
 )
 from trender.llm.base import build_report_system_prompt
 from trender.llm.chain import build_default_chain
@@ -140,9 +141,18 @@ def _fallback_title(kind: ReportKind, lang: Lang, start: date, end: date) -> str
     return f"{label} 리포트 {start} ~ {end}"
 
 
-async def generate_report(kind: ReportKind, lang: Lang, ref: date | None = None) -> int | None:
+async def generate_report(
+    kind: ReportKind,
+    lang: Lang,
+    ref: date | None = None,
+    *,
+    skip_if_exists: bool = False,
+) -> int | None:
     today = ref or date.today()
     start, end = _period_bounds(kind, today)
+    if skip_if_exists and report_exists(kind, lang, start, end):
+        log.info("report.skip_exists", kind=kind, lang=lang, period_start=str(start), period_end=str(end))
+        return None
     range_start = datetime.combine(start, time.min)
     range_end = datetime.combine(end, time.max)
     articles = fetch_articles_in_range(range_start, range_end, lang=lang)
@@ -177,12 +187,78 @@ async def generate_report(kind: ReportKind, lang: Lang, ref: date | None = None)
     return report_id
 
 
-async def generate_all_languages(kind: ReportKind, ref: date | None = None) -> dict[Lang, int | None]:
+async def generate_all_languages(
+    kind: ReportKind,
+    ref: date | None = None,
+    *,
+    skip_if_exists: bool = False,
+) -> dict[Lang, int | None]:
     results: dict[Lang, int | None] = {}
     for lang in ("ko", "ja", "en"):
         try:
-            results[lang] = await generate_report(kind, lang, ref=ref)
+            results[lang] = await generate_report(kind, lang, ref=ref, skip_if_exists=skip_if_exists)
         except Exception as e:
             log.warning("report.lang_failed", kind=kind, lang=lang, error=str(e))
             results[lang] = None
     return results
+
+
+def _ref_for_daily_period(period_date: date) -> date:
+    return period_date + timedelta(days=1)
+
+
+def _ref_for_weekly_period(monday: date) -> date:
+    return monday + timedelta(days=7)
+
+
+async def backfill_reports(
+    kind: ReportKind,
+    days: int,
+    *,
+    ref: date | None = None,
+) -> dict[str, int]:
+    """과거 N일(또는 N주) 구간에서 누락된 (kind, lang) 리포트를 채워 넣는다.
+
+    daily 는 어제부터 N일 전까지, weekly 는 직전 마감 주부터 N주 전까지를 본다.
+    이미 (kind, lang, period_start, period_end) 가 있으면 LLM 호출 없이 스킵한다.
+    """
+    today = ref or date.today()
+    generated = 0
+    skipped = 0
+    empty = 0
+    failed = 0
+
+    if kind == "daily":
+        target_refs = [today - timedelta(days=offset) for offset in range(1, days + 1)]
+    else:
+        last_sunday = today - timedelta(days=today.weekday() + 1)
+        last_monday = last_sunday - timedelta(days=6)
+        target_refs = [_ref_for_weekly_period(last_monday - timedelta(weeks=offset)) for offset in range(days)]
+
+    for r in target_refs:
+        period_start, period_end = _period_bounds(kind, r)
+        for lang in ("ko", "ja", "en"):
+            if report_exists(kind, lang, period_start, period_end):
+                skipped += 1
+                continue
+            try:
+                report_id = await generate_report(kind, lang, ref=r)
+            except Exception as e:
+                failed += 1
+                log.warning(
+                    "backfill.failed",
+                    kind=kind,
+                    lang=lang,
+                    period_start=str(period_start),
+                    period_end=str(period_end),
+                    error=str(e),
+                )
+                continue
+            if report_id is None:
+                empty += 1
+            else:
+                generated += 1
+
+    summary = {"generated": generated, "skipped": skipped, "empty": empty, "failed": failed}
+    log.info("backfill.done", kind=kind, **summary)
+    return summary

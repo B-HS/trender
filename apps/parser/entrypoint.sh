@@ -28,10 +28,14 @@ if [[ -f /etc/trender.env ]]; then
   source /etc/trender.env
 fi
 shopt -s expand_aliases
-if [[ "${1:-}" == "report" ]]; then
-  shift
-  exec /opt/venv/bin/trender --task report "$@"
-fi
+# 추가 옵션(--kind, --days 등)을 받는 task 는 단일 실행으로 처리한다.
+case "${1:-}" in
+  report|backfill)
+    task="$1"
+    shift
+    exec /opt/venv/bin/trender --task "$task" "$@"
+    ;;
+esac
 TASKS=()
 for arg in "$@"; do
   TASKS+=("$arg")

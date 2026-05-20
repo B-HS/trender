@@ -1,17 +1,19 @@
 'use server'
 
-import { and, desc, eq, inArray, like, lt, or, sql, type SQL } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, like, lt, or, sql, type SQL } from 'drizzle-orm'
 import { articles, keywordsExtracted, sources } from '@workspace/db'
 import { db } from '@/lib/db'
 
 export type ArticleCursor = { fetchedAt: string; id: number }
 export type Lang = 'ko' | 'ja' | 'en'
+export type KeywordMode = 'exact' | 'like'
 
 export type ArticleQuery = {
     cursor: ArticleCursor | null
     lang: Lang | null
     sourceId: number | null
     q: string | null
+    keywordMode: KeywordMode
 }
 
 export type ArticleRow = {
@@ -33,15 +35,16 @@ export type LoadArticlesResult = {
 export type SourceOption = {
     id: number
     label: string
-    kind: 'keyword' | 'web'
 }
 
 const PAGE_SIZE = 20
+const TOP_KEYWORDS_LIMIT = 18
+const TOP_KEYWORDS_WINDOW_DAYS = 14
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`)
 
 export const loadArticles = async (query: ArticleQuery): Promise<LoadArticlesResult> => {
-    const { cursor, lang, sourceId, q } = query
+    const { cursor, lang, sourceId, q, keywordMode } = query
     const conds: SQL[] = []
 
     if (cursor) {
@@ -54,12 +57,19 @@ export const loadArticles = async (query: ArticleQuery): Promise<LoadArticlesRes
     if (lang) conds.push(eq(articles.lang, lang))
     if (sourceId) conds.push(eq(articles.sourceId, sourceId))
     if (q && q.trim()) {
-        const pattern = `%${escapeLike(q.trim())}%`
-        const search = or(
-            like(articles.titleOriginal, pattern),
-            sql`EXISTS (SELECT 1 FROM ${keywordsExtracted} ke WHERE ke.article_id = ${articles.id} AND ke.keyword LIKE ${pattern})`,
-        )
-        if (search) conds.push(search)
+        const trimmed = q.trim()
+        if (keywordMode === 'exact') {
+            conds.push(
+                sql`EXISTS (SELECT 1 FROM ${keywordsExtracted} ke WHERE ke.article_id = ${articles.id} AND ke.keyword = ${trimmed})`,
+            )
+        } else {
+            const pattern = `%${escapeLike(trimmed)}%`
+            const search = or(
+                like(articles.titleOriginal, pattern),
+                sql`EXISTS (SELECT 1 FROM ${keywordsExtracted} ke WHERE ke.article_id = ${articles.id} AND ke.keyword LIKE ${pattern})`,
+            )
+            if (search) conds.push(search)
+        }
     }
 
     const where = conds.length === 0 ? undefined : conds.length === 1 ? conds[0] : and(...conds)
@@ -122,9 +132,26 @@ export const loadArticles = async (query: ArticleQuery): Promise<LoadArticlesRes
 
 export const loadActiveSources = async (): Promise<SourceOption[]> => {
     const rows = await db
-        .select({ id: sources.id, value: sources.value, kind: sources.kind })
+        .select({ id: sources.id, value: sources.value })
         .from(sources)
-        .where(eq(sources.stage, 'active'))
-        .orderBy(sources.kind, sources.value)
-    return rows.map((r) => ({ id: r.id, label: r.value, kind: r.kind }))
+        .where(and(eq(sources.stage, 'active'), eq(sources.kind, 'web')))
+        .orderBy(sources.value)
+    return rows.map((r) => ({ id: r.id, label: r.value }))
+}
+
+export const loadTopKeywords = async (lang: Lang | null): Promise<string[]> => {
+    const since = sql`(NOW() - INTERVAL ${TOP_KEYWORDS_WINDOW_DAYS} DAY)`
+    const conds: SQL[] = [sql`${articles.fetchedAt} >= ${since}`]
+    if (lang) conds.push(eq(articles.lang, lang))
+    const where = conds.length === 1 ? conds[0] : and(...conds)
+
+    const rows = await db
+        .select({ keyword: keywordsExtracted.keyword, freq: count() })
+        .from(keywordsExtracted)
+        .innerJoin(articles, eq(keywordsExtracted.articleId, articles.id))
+        .where(where)
+        .groupBy(keywordsExtracted.keyword)
+        .orderBy(desc(count()))
+        .limit(TOP_KEYWORDS_LIMIT)
+    return rows.map((r) => r.keyword)
 }

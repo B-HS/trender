@@ -133,6 +133,15 @@ def fetch_articles_in_range(start: datetime, end: datetime, lang: Lang | None = 
         return [Article(**row) for row in cur.fetchall()]  # type: ignore[arg-type]
 
 
+def report_exists(kind: str, lang: Lang, period_start: date, period_end: date) -> bool:
+    with cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM reports WHERE kind=%s AND lang=%s AND period_start=%s AND period_end=%s LIMIT 1",
+            (kind, lang, period_start, period_end),
+        )
+        return cur.fetchone() is not None
+
+
 def insert_report(report: Report) -> int:
     with cursor() as cur:
         cur.execute(

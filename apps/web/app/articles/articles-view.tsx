@@ -2,16 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState, type FC } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Button } from '@workspace/ui/components/button'
+import { Badge } from '@workspace/ui/components/badge'
 import { Card, CardContent, CardHeader } from '@workspace/ui/components/card'
 import { ArticleCard } from './article-card'
-import { loadArticles } from './actions'
-import type { ArticleCursor, ArticleRow, Lang, LoadArticlesResult, SourceOption } from './actions'
+import { loadArticles, loadTopKeywords } from './actions'
+import type { ArticleCursor, ArticleRow, KeywordMode, Lang, LoadArticlesResult, SourceOption } from './actions'
 
 type ArticlesViewProps = {
-    initialQuery: { lang: Lang | null; sourceId: number | null; q: string | null }
+    initialQuery: { lang: Lang | null; sourceId: number | null; q: string | null; keywordMode: KeywordMode }
     sourceOptions: SourceOption[]
+    topKeywords: string[]
     totalCount: number
 }
 
@@ -39,7 +41,7 @@ const ArticleSkeleton: FC = () => (
     </Card>
 )
 
-export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOptions, totalCount }) => {
+export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOptions, topKeywords, totalCount }) => {
     const router = useRouter()
     const pathname = usePathname()
 
@@ -47,11 +49,15 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
     const [sourceId, setSourceId] = useState<number | null>(initialQuery.sourceId)
     const [searchInput, setSearchInput] = useState<string>(initialQuery.q ?? '')
     const [debouncedQ, setDebouncedQ] = useState<string | null>(initialQuery.q)
+    const [keywordMode, setKeywordMode] = useState<KeywordMode>(initialQuery.keywordMode)
     const isFirstRender = useRef(true)
 
     useEffect(() => {
         const trimmed = searchInput.trim()
-        const t = setTimeout(() => setDebouncedQ(trimmed.length > 0 ? trimmed : null), 300)
+        const t = setTimeout(() => {
+            setDebouncedQ(trimmed.length > 0 ? trimmed : null)
+            setKeywordMode((prev) => (prev === 'exact' ? 'like' : prev))
+        }, 300)
         return () => clearTimeout(t)
     }, [searchInput])
 
@@ -64,24 +70,42 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
         if (lang) sp.set('lang', lang)
         if (sourceId) sp.set('source', String(sourceId))
         if (debouncedQ) sp.set('q', debouncedQ)
+        if (debouncedQ && keywordMode === 'exact') sp.set('mode', 'exact')
         const qs = sp.toString()
         router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-    }, [lang, sourceId, debouncedQ, pathname, router])
+    }, [lang, sourceId, debouncedQ, keywordMode, pathname, router])
 
-    const queryKey = useMemo(() => ['articles', { lang, sourceId, q: debouncedQ }] as const, [lang, sourceId, debouncedQ])
+    const pickKeyword = (kw: string) => {
+        setSearchInput(kw)
+        setDebouncedQ(kw)
+        setKeywordMode('exact')
+    }
+
+    const queryKey = useMemo(
+        () => ['articles', { lang, sourceId, q: debouncedQ, keywordMode }] as const,
+        [lang, sourceId, debouncedQ, keywordMode],
+    )
 
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending, isError, error, refetch, isRefetching } = useInfiniteQuery<
         LoadArticlesResult,
         Error,
         { pages: LoadArticlesResult[]; pageParams: (ArticleCursor | null)[] },
-        readonly [string, { lang: Lang | null; sourceId: number | null; q: string | null }],
+        readonly [string, { lang: Lang | null; sourceId: number | null; q: string | null; keywordMode: KeywordMode }],
         ArticleCursor | null
     >({
         queryKey,
-        queryFn: ({ pageParam }) => loadArticles({ cursor: pageParam, lang, sourceId, q: debouncedQ }),
+        queryFn: ({ pageParam }) => loadArticles({ cursor: pageParam, lang, sourceId, q: debouncedQ, keywordMode }),
         initialPageParam: null,
         getNextPageParam: (lastPage) => lastPage.nextCursor,
     })
+
+    const { data: liveKeywords } = useQuery({
+        queryKey: ['top-keywords', { lang }] as const,
+        queryFn: () => loadTopKeywords(lang),
+        initialData: topKeywords,
+        staleTime: 5 * 60 * 1000,
+    })
+    const keywords = liveKeywords ?? topKeywords
 
     const sentinelRef = useRef<HTMLDivElement | null>(null)
     useEffect(() => {
@@ -116,6 +140,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
         setSourceId(null)
         setSearchInput('')
         setDebouncedQ(null)
+        setKeywordMode('like')
     }
 
     return (
@@ -143,7 +168,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                         <option value=''>전체 소스</option>
                         {sourceOptions.map((s) => (
                             <option key={s.id} value={s.id}>
-                                [{s.kind === 'keyword' ? '키워드' : '웹'}] {s.label}
+                                {s.label}
                             </option>
                         ))}
                     </select>
@@ -170,6 +195,28 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                         새로고침
                     </Button>
                 </div>
+                {keywords.length > 0 ? (
+                    <div className='flex flex-wrap items-center gap-1.5'>
+                        <span className='text-muted-foreground/70 mr-1 text-xs'>인기</span>
+                        {keywords.map((kw) => {
+                            const active = keywordMode === 'exact' && debouncedQ === kw
+                            return (
+                                <Badge
+                                    key={kw}
+                                    variant={active ? 'secondary' : 'outline'}
+                                    onClick={() => pickKeyword(kw)}
+                                    className='hover:bg-muted cursor-pointer font-normal'>
+                                    {kw}
+                                </Badge>
+                            )
+                        })}
+                    </div>
+                ) : null}
+                {debouncedQ && keywordMode === 'exact' ? (
+                    <p className='text-muted-foreground text-xs'>
+                        키워드 <span className='text-foreground font-medium'>“{debouncedQ}”</span> 정확히 일치하는 기사만 표시
+                    </p>
+                ) : null}
                 <p className='text-muted-foreground text-xs'>
                     총 <span className='tabular-nums'>{totalCount.toLocaleString('ko-KR')}</span>건 중{' '}
                     <span className='text-foreground tabular-nums'>{items.length.toLocaleString('ko-KR')}</span>건 표시

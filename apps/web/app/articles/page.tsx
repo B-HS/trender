@@ -3,7 +3,7 @@ import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query
 import { articles } from '@workspace/db'
 import { db } from '@/lib/db'
 import { ArticlesView } from './articles-view'
-import { loadActiveSources, loadArticles, type Lang } from './actions'
+import { loadActiveSources, loadArticles, loadTopKeywords, type KeywordMode, type Lang } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,21 +18,28 @@ const parseQ = (v: string | undefined): string | null => {
     const t = v?.trim()
     return t ? t : null
 }
+const parseKeywordMode = (v: string | undefined): KeywordMode => (v === 'exact' ? 'exact' : 'like')
 
-const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; source?: string; q?: string }> }) => {
+const Page = async ({
+    searchParams,
+}: {
+    searchParams: Promise<{ lang?: string; source?: string; q?: string; mode?: string }>
+}) => {
     const sp = await searchParams
     const lang = parseLang(sp.lang)
     const sourceId = parseSourceId(sp.source)
     const q = parseQ(sp.q)
+    const keywordMode = parseKeywordMode(sp.mode)
 
     const queryClient = new QueryClient()
-    const [, sourceOptions, totalRow] = await Promise.all([
+    const [, sourceOptions, topKeywords, totalRow] = await Promise.all([
         queryClient.prefetchInfiniteQuery({
-            queryKey: ['articles', { lang, sourceId, q }] as const,
-            queryFn: () => loadArticles({ cursor: null, lang, sourceId, q }),
+            queryKey: ['articles', { lang, sourceId, q, keywordMode }] as const,
+            queryFn: () => loadArticles({ cursor: null, lang, sourceId, q, keywordMode }),
             initialPageParam: null,
         }),
         loadActiveSources(),
+        loadTopKeywords(lang),
         db.select({ value: count() }).from(articles),
     ])
     const total = totalRow[0]?.value ?? 0
@@ -44,7 +51,12 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; s
                 <p className='text-muted-foreground text-sm'>한·일·영 트렌드 기사를 검색·필터링할 수 있습니다.</p>
             </header>
             <HydrationBoundary state={dehydrate(queryClient)}>
-                <ArticlesView initialQuery={{ lang, sourceId, q }} sourceOptions={sourceOptions} totalCount={total} />
+                <ArticlesView
+                    initialQuery={{ lang, sourceId, q, keywordMode }}
+                    sourceOptions={sourceOptions}
+                    topKeywords={topKeywords}
+                    totalCount={total}
+                />
             </HydrationBoundary>
         </div>
     )

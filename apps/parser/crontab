@@ -7,4 +7,7 @@ PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # 리포트는 ko/ja/en 3개 언어를 한 번에 생성 (일간/주간만)
 30 0 * * * /usr/local/bin/trender-run report --kind daily >> /var/log/trender.log 2>&1
 0 1 * * 1 /usr/local/bin/trender-run report --kind weekly >> /var/log/trender.log 2>&1
+# 누락된 과거 리포트 보충 (이미 있으면 LLM 호출 없이 스킵)
+45 2 * * * /usr/local/bin/trender-run backfill --kind daily --days 14 >> /var/log/trender.log 2>&1
+45 2 * * 1 /usr/local/bin/trender-run backfill --kind weekly --days 8 >> /var/log/trender.log 2>&1
 15 3 * * * /usr/local/bin/trender-run evolve >> /var/log/trender.log 2>&1
