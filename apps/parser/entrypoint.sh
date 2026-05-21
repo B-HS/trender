@@ -28,9 +28,9 @@ if [[ -f /etc/trender.env ]]; then
   source /etc/trender.env
 fi
 shopt -s expand_aliases
-# 추가 옵션(--kind, --days 등)을 받는 task 는 단일 실행으로 처리한다.
+# 추가 옵션(--kind, --days, --force 등)을 받는 task 는 단일 실행으로 처리한다.
 case "${1:-}" in
-  report|backfill)
+  report|backfill|catchup)
     task="$1"
     shift
     exec /opt/venv/bin/trender --task "$task" "$@"
@@ -46,8 +46,13 @@ done
 EOF
 chmod +x /usr/local/bin/trender-run
 
+mkdir -p /var/log/trender-state
+
 # Ensure seeds are synced once on boot
 /opt/venv/bin/trender --task seed || echo "[entrypoint] seed sync failed (continuing)"
+
+# 부팅 시점에 한 번 따라잡기 — sleep 후 docker 가 컨테이너를 재기동한 경우 즉시 누락분 보충
+/opt/venv/bin/trender --task catchup --force || echo "[entrypoint] catchup failed (continuing)"
 
 # Run cron in foreground, but also tail the log so docker logs see output
 cron

@@ -8,6 +8,7 @@ from trender.config import get_settings
 from trender.db.models import Lang, ReportKind
 from trender.fetch.browser import shutdown as shutdown_browser
 from trender.logging import get_logger, setup_logging
+from trender.pipeline.catchup import mark_task_done, run_catchup
 from trender.pipeline.collect import collect_all
 from trender.pipeline.evolve import evolve_sources
 from trender.pipeline.extract_keywords import extract_pending
@@ -16,7 +17,7 @@ from trender.seeds.loader import sync_seeds
 
 log = get_logger(__name__)
 
-Task = Literal["seed", "collect", "keywords", "report", "backfill", "evolve", "all"]
+Task = Literal["seed", "collect", "keywords", "report", "backfill", "catchup", "evolve", "all"]
 
 
 async def _run_report(kind: ReportKind, lang: Lang | None) -> None:
@@ -32,23 +33,33 @@ async def _run_backfill(kind: str, days: int) -> None:
         await backfill_reports(k, days=days)
 
 
-async def _run_task(task: Task, kind: str, lang: Lang | None, limit: int, days: int) -> None:
+async def _run_task(task: Task, kind: str, lang: Lang | None, limit: int, days: int, force: bool) -> None:
     if task == "seed":
         sync_seeds()
     elif task == "collect":
         await collect_all()
+        mark_task_done("collect")
     elif task == "keywords":
         await extract_pending(limit=limit)
+        mark_task_done("keywords")
     elif task == "report":
         await _run_report(kind, lang)  # type: ignore[arg-type]
     elif task == "backfill":
         await _run_backfill(kind, days=days)
+        if kind in ("daily", "all"):
+            mark_task_done("backfill_daily")
+        if kind in ("weekly", "all"):
+            mark_task_done("backfill_weekly")
+    elif task == "catchup":
+        await run_catchup(force=force, keywords_limit=limit)
     elif task == "evolve":
         evolve_sources()
     elif task == "all":
         sync_seeds()
         await collect_all()
+        mark_task_done("collect")
         await extract_pending(limit=limit)
+        mark_task_done("keywords")
         await _run_report(kind, lang)
         evolve_sources()
     else:
@@ -60,7 +71,12 @@ def cli() -> None:
     parser.add_argument(
         "--task",
         required=True,
-        choices=["seed", "collect", "keywords", "report", "backfill", "evolve", "all"],
+        choices=["seed", "collect", "keywords", "report", "backfill", "catchup", "evolve", "all"],
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="catchup 작업에서 heartbeat 시각과 무관하게 모든 하위 task 를 강제 실행",
     )
     parser.add_argument(
         "--kind",
@@ -94,7 +110,7 @@ def cli() -> None:
 
     async def _runner() -> None:
         try:
-            await _run_task(args.task, args.kind, args.lang, args.limit, args.days)
+            await _run_task(args.task, args.kind, args.lang, args.limit, args.days, args.force)
         finally:
             await shutdown_browser()
 
