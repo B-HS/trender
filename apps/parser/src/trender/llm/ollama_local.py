@@ -9,9 +9,10 @@ from trender.llm.base import LLMClient, LLMError
 class OllamaLocalClient(LLMClient):
     name = "ollama-local"
 
-    def __init__(self, *, host: str, model: str, timeout: float = 120.0) -> None:
+    def __init__(self, *, host: str, model: str, num_ctx: int = 65536, timeout: float = 600.0) -> None:
         self._host = host.rstrip("/")
         self._model = model
+        self._num_ctx = num_ctx
         self._client = httpx.AsyncClient(base_url=self._host, timeout=timeout)
 
     @retry(
@@ -30,7 +31,7 @@ class OllamaLocalClient(LLMClient):
                     {"role": "user", "content": user},
                 ],
                 "stream": False,
-                "options": {"temperature": temperature},
+                "options": {"temperature": temperature, "num_ctx": self._num_ctx},
             },
         )
         resp.raise_for_status()

@@ -95,7 +95,20 @@ _USER_PROMPT_BY_LANG: dict[Lang, str] = {
 }
 
 
-_BODY_CHAR_LIMIT = 12000
+_BODY_CHAR_LIMIT = 2000
+_MAX_TOTAL_BODY_CHARS = 50000
+
+
+def _cap_articles(articles: list[Article]) -> list[Article]:
+    selected: list[Article] = []
+    total = 0
+    for a in articles:
+        body_len = min(len((a.content_original or "").strip()), _BODY_CHAR_LIMIT)
+        if selected and total + body_len > _MAX_TOTAL_BODY_CHARS:
+            break
+        selected.append(a)
+        total += body_len
+    return selected
 
 
 def _format_articles_block(articles: list[Article]) -> str:
@@ -159,6 +172,11 @@ async def generate_report(
     if not articles:
         log.warning("report.empty", kind=kind, lang=lang, period_start=str(start), period_end=str(end))
         return None
+
+    capped = _cap_articles(articles)
+    if len(capped) < len(articles):
+        log.info("report.articles_capped", kind=kind, lang=lang, total=len(articles), used=len(capped))
+    articles = capped
 
     user_prompt = _format_user_prompt(kind, lang, start, end, articles)
     system_prompt = build_report_system_prompt(lang)
@@ -229,7 +247,7 @@ async def backfill_reports(
     failed = 0
 
     if kind == "daily":
-        target_refs = [today - timedelta(days=offset) for offset in range(1, days + 1)]
+        target_refs = [today - timedelta(days=offset) for offset in range(0, days)]
     else:
         last_sunday = today - timedelta(days=today.weekday() + 1)
         last_monday = last_sunday - timedelta(days=6)

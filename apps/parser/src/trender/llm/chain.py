@@ -55,7 +55,14 @@ def _build_ollama_cloud(s: Settings) -> LLMClient | None:
 
 
 def _build_ollama_local(s: Settings) -> LLMClient | None:
-    return OllamaLocalClient(host=s.ollama_host, model=s.ollama_local_model)
+    if not s.ollama_host:
+        return None
+    return OllamaLocalClient(
+        host=s.ollama_host,
+        model=s.ollama_local_model,
+        num_ctx=s.ollama_num_ctx,
+        timeout=s.ollama_timeout_seconds,
+    )
 
 
 def _build_omlx_local(s: Settings) -> LLMClient | None:

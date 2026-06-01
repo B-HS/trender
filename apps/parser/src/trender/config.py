@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     # Ollama Local
     ollama_host: str = Field(default="http://localhost:11434", alias="OLLAMA_HOST")
     ollama_local_model: str = Field(default="llama3.1:8b", alias="OLLAMA_LOCAL_MODEL")
+    ollama_num_ctx: int = Field(default=65536, alias="OLLAMA_NUM_CTX")
+    ollama_timeout_seconds: int = Field(default=600, alias="OLLAMA_TIMEOUT_SECONDS")
 
     # OMLX Local (jundot/omlx — Apple Silicon menu-bar LLM server, OpenAI 호환)
     omlx_host: str = Field(default="http://localhost:8080", alias="OMLX_HOST")
