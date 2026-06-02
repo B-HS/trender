@@ -24,11 +24,19 @@
 - 구조화 로그에 ANSI 컬러코드가 끼어 `grep 'task=report'` 가 빗나가 "안 돈다"고 오판하기 쉬움. `trender.start` 등 색이 안 끼는 토큰으로 grep 할 것.
 
 ## 해결
-1. `.env.local`: `LLM_PROVIDERS=ollama_cloud,ollama_local`, `OLLAMA_HOST=http://host.docker.internal:11434`, `OLLAMA_LOCAL_MODEL=qwen3.6:latest`, `OLLAMA_NUM_CTX=65536`. → 429 시 호스트 Ollama 로 fallback.
+1. `.env.local`: `LLM_PROVIDERS=ollama_cloud,ollama_local`, `OLLAMA_HOST=http://host.docker.internal:11434`, `OLLAMA_LOCAL_MODEL=qwen2.5:14b`, `OLLAMA_NUM_CTX=65536`. → 429 시 호스트 Ollama 로 fallback.
+   - **주의**: 호스트에 원래 있던 `qwen3.6:latest` 는 ollama(0.23.1)에서 `/api/chat`·`/api/generate` 둘 다 `"does not support chat/generate"` 로 400 → fallback 으로 못 씀. chat 템플릿 있는 `qwen2.5:14b` 를 pull 해 사용. (CJK 양호, fallback 품질 충분)
 2. `OllamaLocalClient`: `num_ctx`(기본 65536)·`timeout`(기본 600s) 적용. ollama 기본 컨텍스트(~4k)로 잘려 엉터리 리포트가 나오던 문제 차단.
 3. `report.py _cap_articles`: per-article `_BODY_CHAR_LIMIT=2000`, 합계 `_MAX_TOTAL_BODY_CHARS=50000` 예산으로 기사 수를 캡(최근순). 로컬 컨텍스트 초과 방지. 캡 발생 시 `report.articles_capped` 로깅(무음 절단 금지).
 4. `backfill_reports("daily")` `range(0, days)` 로 변경 → 어제치 당일 재시도 포함.
 5. `entrypoint.sh` env dump 목록에 `OLLAMA_NUM_CTX OLLAMA_TIMEOUT_SECONDS` 추가(cron 자식 프로세스가 받도록).
+
+## provider 라이브 검증 (complete() 실호출)
+- `ollama_cloud` — OK (간헐 429)
+- `ollama_local` (qwen2.5:14b) — OK. cloud 강제 실패(401) 시 fallback 동작 + 리포트 프롬프트로 정상 한국어 마크다운 생성 확인
+- `omlx_local` (host:8080) — 서버는 떠 있으나 모델 미로드 → "Server disconnected". 쓰려면 omlx 앱에서 모델 로드 필요
+- `openrouter` — API key 없음(의도된 미구성, 빌더가 None 반환해 skip)
+- `openai_oauth` — token/auth_file 없음(codex auth 마운트 주석처리). 쓰려면 compose 의 `~/.codex/auth.json` 마운트 해제
 
 ## 알려진 한계 (후속)
 - `_cap_articles` 는 최근순 head 절단이라 weekly 에서 마지막 날들에 편중될 수 있음. 기간 전반에 걸친 균등 샘플링은 후속 과제.

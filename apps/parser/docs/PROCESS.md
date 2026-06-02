@@ -13,6 +13,9 @@
 - [x] g. docker rebuild & up — env 반영 확인(`/etc/trender.env`)
 - [x] h. 누락분 수동 backfill — daily(14일) generated=3·failed=0(5-31 ko/ja/en). weekly(8주) generated=6·failed=0(5-25~5-31 ko/ja/en 신규). 교차검증: 5-18~5-31 daily ko/ja 완비, en 은 기사 있는 날만(정상), weekly 최근 2주 3언어 완비
 
+- [x] i. provider 라이브 검증 — 5종 complete() 실호출. **fallback 모델 `qwen3.6:latest` 가 ollama chat/generate 미지원(400)** 발견 → `qwen2.5:14b` pull 후 교체. cloud 강제 실패→local fallback + 리포트 생성 end-to-end 확인. (omlx 모델 미로드, openrouter/openai_oauth 미구성=의도)
+- [x] j. 기타 구동 서비스 점검 — trender(✅)·messenger-mysql(healthy)·api-proxy2(up). oiia 스택은 dev 인프라로 3주째 의도적 정지(미기동 유지)
+
 ## 후속 (미착수)
 - `_cap_articles` 최근순 편중 → 기간 균등 샘플링
 - 캡으로 인한 cloud 리포트 입력 기사 수 감소(품질 트레이드오프) 재검토
