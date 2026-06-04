@@ -1,10 +1,12 @@
 import { Geist_Mono, Inter } from "next/font/google"
+import { Analytics } from "@vercel/analytics/next"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/query-provider"
 import { SiteNav } from "@/components/site-nav"
 import { BackToTop } from "@/components/back-to-top"
+import { AuthProvider } from "@/components/auth/auth-provider"
 import { cn } from "@workspace/ui/lib/utils"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
@@ -29,12 +31,15 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
       <body>
         <ThemeProvider>
           <QueryProvider>
-            <div className="min-h-svh bg-background">
-              <SiteNav />
-              <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
-              <BackToTop />
-            </div>
+            <AuthProvider>
+              <div className="min-h-svh bg-background">
+                <SiteNav />
+                <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+                <BackToTop />
+              </div>
+            </AuthProvider>
           </QueryProvider>
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>

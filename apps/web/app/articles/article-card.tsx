@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { FC } from 'react'
 import { Badge } from '@workspace/ui/components/badge'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@workspace/ui/components/card'
+import { FavoriteButton } from '@/components/favorite-button'
 import type { ArticleRow } from './actions'
 
 const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
@@ -44,7 +45,8 @@ export const ArticleCard: FC<ArticleCardProps> = ({ article: a }) => {
             ) : (
                 <CardContent className='text-muted-foreground/70 text-xs italic'>키워드 추출 대기 중</CardContent>
             )}
-            <CardFooter className='flex justify-end pt-2'>
+            <CardFooter className='flex items-center justify-between pt-2'>
+                <FavoriteButton targetType='article' targetId={a.id} />
                 <a
                     href={a.url}
                     target='_blank'

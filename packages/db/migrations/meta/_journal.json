@@ -43,6 +43,13 @@
       "when": 1780539779629,
       "tag": "0005_wise_triathlon",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1780554248407,
+      "tag": "0006_tranquil_wolfpack",
+      "breakpoints": true
     }
   ]
 }

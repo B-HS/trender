@@ -1,4 +1,6 @@
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
+import { cacheLife, cacheTag } from 'next/cache'
 import Link from 'next/link'
 import { reports, reportItems, articles, keywordsExtracted, asc, desc, eq, inArray } from '@workspace/db'
 import { db } from '@/lib/db'
@@ -6,39 +8,19 @@ import { Badge } from '@workspace/ui/components/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Separator } from '@workspace/ui/components/separator'
 import { ReportBody } from '@/components/report-body'
+import { FavoriteButton } from '@/components/favorite-button'
 import { linkifyCitations } from '@/lib/citations'
 import { excerpt, stripMarkdown } from '@/lib/excerpt'
 
-export const dynamic = 'force-dynamic'
-
-export const generateMetadata = async ({ params }: { params: Promise<{ id: string }> }) => {
-    const { id } = await params
-    const reportId = Number(id)
-    if (!Number.isFinite(reportId)) return {}
-    const [report] = await db.select({ title: reports.title, markdown: reports.markdown }).from(reports).where(eq(reports.id, reportId)).limit(1)
-    if (!report) return {}
-    return { title: report.title, description: excerpt(stripMarkdown(report.markdown), 150) }
-}
-
-const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
-const LOCALE_BY_LANG: Record<string, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' }
-
-const KIND_LABEL: Record<string, Record<string, string>> = {
-    daily: { ko: '일간', ja: '日次', en: 'Daily' },
-    weekly: { ko: '주간', ja: '週次', en: 'Weekly' },
-}
-
-const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
-    const { id } = await params
-    const reportId = Number(id)
-    if (!Number.isFinite(reportId)) notFound()
-
+const getReportData = async (reportId: number) => {
+    'use cache'
+    cacheTag('report', `report:${reportId}`)
     const [report] = await db.select().from(reports).where(eq(reports.id, reportId)).limit(1)
-    if (!report) notFound()
-
-    const locale = LOCALE_BY_LANG[report.lang] ?? 'ko-KR'
-    const formatDate = (d: Date | string) => new Date(d).toLocaleDateString(locale)
-
+    if (!report) {
+        cacheLife('minutes')
+        return null
+    }
+    cacheLife(report.lang === 'ko' || report.markdownTranslatedKo !== null ? 'permanent' : 'minutes')
     const items = await db
         .select({
             rank: reportItems.rank,
@@ -52,20 +34,46 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
         .innerJoin(articles, eq(reportItems.articleId, articles.id))
         .where(eq(reportItems.reportId, reportId))
         .orderBy(asc(reportItems.rank))
-
     const articleIds = items.map((it) => it.articleId)
     const keywordRows =
         articleIds.length > 0
             ? await db
-                  .select({
-                      articleId: keywordsExtracted.articleId,
-                      keyword: keywordsExtracted.keyword,
-                      score: keywordsExtracted.score,
-                  })
+                  .select({ articleId: keywordsExtracted.articleId, keyword: keywordsExtracted.keyword, score: keywordsExtracted.score })
                   .from(keywordsExtracted)
                   .where(inArray(keywordsExtracted.articleId, articleIds))
                   .orderBy(desc(keywordsExtracted.score))
             : []
+    return { report, items, keywordRows }
+}
+
+export const generateMetadata = async ({ params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params
+    const reportId = Number(id)
+    if (!Number.isFinite(reportId)) return {}
+    const data = await getReportData(reportId)
+    if (!data) return {}
+    return { title: data.report.title, description: excerpt(stripMarkdown(data.report.markdown), 150) }
+}
+
+const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
+const LOCALE_BY_LANG: Record<string, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' }
+
+const KIND_LABEL: Record<string, Record<string, string>> = {
+    daily: { ko: '일간', ja: '日次', en: 'Daily' },
+    weekly: { ko: '주간', ja: '週次', en: 'Weekly' },
+}
+
+const ReportView = async ({ params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params
+    const reportId = Number(id)
+    if (!Number.isFinite(reportId)) notFound()
+
+    const data = await getReportData(reportId)
+    if (!data) notFound()
+    const { report, items, keywordRows } = data
+
+    const locale = LOCALE_BY_LANG[report.lang] ?? 'ko-KR'
+    const formatDate = (d: Date | string) => new Date(d).toLocaleDateString(locale)
 
     const keywordsByArticle = new Map<number, { keyword: string; score: number }[]>()
     for (const k of keywordRows) {
@@ -94,6 +102,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                     <span className='text-muted-foreground text-sm'>
                         {formatDate(report.periodStart)} ~ {formatDate(report.periodEnd)}
                     </span>
+                    <FavoriteButton targetType='report' targetId={reportId} className='ml-auto' />
                 </div>
                 <h1 className='text-2xl leading-tight font-semibold sm:text-3xl'>{report.title}</h1>
             </div>
@@ -147,5 +156,11 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
         </div>
     )
 }
+
+const Page = ({ params }: { params: Promise<{ id: string }> }) => (
+    <Suspense fallback={<p className='text-muted-foreground text-sm'>불러오는 중…</p>}>
+        <ReportView params={params} />
+    </Suspense>
+)
 
 export default Page

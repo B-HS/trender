@@ -1,12 +1,12 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { reports, and, desc, eq, type SQL } from '@workspace/db'
 import { db } from '@/lib/db'
 import { stripMarkdown } from '@/lib/excerpt'
+import { FavoriteButton } from '@/components/favorite-button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components/card'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
-
-export const dynamic = 'force-dynamic'
 
 const LANGS = ['ko', 'ja', 'en'] as const
 const KINDS = ['daily', 'weekly'] as const
@@ -33,7 +33,7 @@ const buildHref = (lang: Lang, kind: Kind) => {
     return qs ? `/?${qs}` : '/'
 }
 
-const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; kind?: string }> }) => {
+const ReportList = async ({ searchParams }: { searchParams: Promise<{ lang?: string; kind?: string }> }) => {
     const sp = await searchParams
     const lang = parseLang(sp.lang)
     const kind = parseKind(sp.kind)
@@ -43,19 +43,10 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; k
     const conds: SQL[] = [eq(reports.lang, lang), eq(reports.kind, kind)]
     const where = conds.length === 1 ? conds[0] : and(...conds)
 
-    const rows = await db
-        .select()
-        .from(reports)
-        .where(where)
-        .orderBy(desc(reports.periodStart), desc(reports.createdAt))
-        .limit(50)
+    const rows = await db.select().from(reports).where(where).orderBy(desc(reports.periodStart), desc(reports.createdAt)).limit(50)
 
     return (
-        <div className='flex flex-col gap-6'>
-            <div className='flex flex-col gap-2'>
-                <h1 className='text-2xl font-semibold sm:text-3xl'>최신 리포트</h1>
-                <p className='text-muted-foreground text-sm'>언어·기간별로 따로 생성된 트렌드 리포트입니다.</p>
-            </div>
+        <>
             <div className='flex flex-col gap-3'>
                 <div className='flex flex-wrap items-center gap-2'>
                     <span className='text-muted-foreground/70 mr-1 text-xs'>언어</span>
@@ -85,28 +76,43 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; k
             ) : (
                 <div className='grid gap-3 sm:gap-4'>
                     {rows.map((r) => (
-                        <Link key={r.id} href={`/reports/${r.id}`} className='group'>
-                            <Card className='transition-colors group-hover:bg-accent'>
-                                <CardHeader className='gap-2'>
-                                    <div className='flex flex-wrap items-center gap-2'>
-                                        <Badge variant='secondary'>{KIND_LABEL[kind][lang]}</Badge>
-                                        <Badge variant='outline'>{LANG_LABEL[lang]}</Badge>
-                                        <CardDescription>
-                                            {formatDate(r.periodStart)} ~ {formatDate(r.periodEnd)}
-                                        </CardDescription>
-                                    </div>
-                                    <CardTitle className='text-base leading-snug sm:text-lg'>{r.title}</CardTitle>
-                                </CardHeader>
-                                <CardContent className='text-muted-foreground line-clamp-2 text-sm leading-relaxed'>
-                                    {stripMarkdown(r.markdown).slice(0, 240)}
-                                </CardContent>
-                            </Card>
-                        </Link>
+                        <Card key={r.id} className='transition-colors hover:bg-accent'>
+                            <CardHeader className='gap-2'>
+                                <div className='flex flex-wrap items-center gap-2'>
+                                    <Badge variant='secondary'>{KIND_LABEL[kind][lang]}</Badge>
+                                    <Badge variant='outline'>{LANG_LABEL[lang]}</Badge>
+                                    <CardDescription>
+                                        {formatDate(r.periodStart)} ~ {formatDate(r.periodEnd)}
+                                    </CardDescription>
+                                    <FavoriteButton targetType='report' targetId={r.id} className='ml-auto' />
+                                </div>
+                                <CardTitle className='text-base leading-snug sm:text-lg'>
+                                    <Link href={`/reports/${r.id}`} className='wrap-break-word hover:underline'>
+                                        {r.title}
+                                    </Link>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className='text-muted-foreground line-clamp-2 text-sm leading-relaxed'>
+                                {stripMarkdown(r.markdown).slice(0, 240)}
+                            </CardContent>
+                        </Card>
                     ))}
                 </div>
             )}
-        </div>
+        </>
     )
 }
+
+const Page = ({ searchParams }: { searchParams: Promise<{ lang?: string; kind?: string }> }) => (
+    <div className='flex flex-col gap-6'>
+        <div className='flex flex-col gap-2'>
+            <h1 className='text-2xl font-semibold sm:text-3xl'>최신 리포트</h1>
+            <p className='text-muted-foreground text-sm'>언어·기간별로 따로 생성된 트렌드 리포트입니다.</p>
+        </div>
+        <Suspense fallback={<p className='text-muted-foreground text-sm'>불러오는 중…</p>}>
+            <ReportList searchParams={searchParams} />
+        </Suspense>
+    </div>
+)
 
 export default Page

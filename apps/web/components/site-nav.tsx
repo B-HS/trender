@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { AuthNav } from "@/components/auth/auth-nav"
 
 export const SiteNav = () => {
   return (
@@ -14,7 +15,11 @@ export const SiteNav = () => {
         <Link href="/articles" className="text-muted-foreground hover:text-foreground">
           기사
         </Link>
-        <div className="ml-auto">
+        <Link href="/favorites" className="text-muted-foreground hover:text-foreground">
+          책갈피
+        </Link>
+        <div className="ml-auto flex items-center gap-2">
+          <AuthNav />
           <ThemeToggle />
         </div>
       </nav>

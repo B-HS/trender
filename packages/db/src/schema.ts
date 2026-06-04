@@ -16,6 +16,7 @@ export const sourceKind = ['keyword', 'web'] as const
 export const sourceStage = ['candidate', 'active', 'demoted'] as const
 export const lang = ['ko', 'ja', 'en'] as const
 export const reportKind = ['daily', 'weekly'] as const
+export const favoriteTarget = ['article', 'report'] as const
 
 export const sources = mysqlTable(
     'sources',
@@ -137,6 +138,54 @@ export const sourceStats = mysqlTable(
         dateIdx: index('idx_date').on(t.date),
     }),
 )
+
+export const users = mysqlTable(
+    'users',
+    {
+        id: varchar('id', { length: 36 }).primaryKey(),
+        username: varchar('username', { length: 64 }).notNull(),
+        createdAt: timestamp('created_at').defaultNow().notNull(),
+    },
+    (t) => ({
+        uniqUsername: uniqueIndex('uniq_username').on(t.username),
+    }),
+)
+
+export const sessions = mysqlTable(
+    'sessions',
+    {
+        id: varchar('id', { length: 64 }).primaryKey(),
+        userId: varchar('user_id', { length: 36 })
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        expiresAt: datetime('expires_at').notNull(),
+        createdAt: timestamp('created_at').defaultNow().notNull(),
+    },
+    (t) => ({
+        userIdx: index('idx_session_user').on(t.userId),
+    }),
+)
+
+export const favorites = mysqlTable(
+    'favorites',
+    {
+        id: bigint('id', { mode: 'number' }).autoincrement().primaryKey(),
+        userId: varchar('user_id', { length: 36 })
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        targetType: mysqlEnum('target_type', favoriteTarget).notNull(),
+        targetId: bigint('target_id', { mode: 'number' }).notNull(),
+        createdAt: timestamp('created_at').defaultNow().notNull(),
+    },
+    (t) => ({
+        uniqTarget: uniqueIndex('uniq_user_target').on(t.userId, t.targetType, t.targetId),
+        userIdx: index('idx_fav_user').on(t.userId),
+    }),
+)
+
+export type User = typeof users.$inferSelect
+export type Session = typeof sessions.$inferSelect
+export type Favorite = typeof favorites.$inferSelect
 
 export type Source = typeof sources.$inferSelect
 export type NewSource = typeof sources.$inferInsert

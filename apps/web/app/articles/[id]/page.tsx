@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { cacheLife, cacheTag } from 'next/cache'
 import { articles, keywordsExtracted, sources, desc, eq } from '@workspace/db'
 import { db } from '@/lib/db'
 import { Badge } from '@workspace/ui/components/badge'
@@ -7,32 +9,13 @@ import { Button } from '@workspace/ui/components/button'
 import { Card, CardContent } from '@workspace/ui/components/card'
 import { Separator } from '@workspace/ui/components/separator'
 import { ArticleBody } from '@/components/article-body'
+import { FavoriteButton } from '@/components/favorite-button'
 import { sanitizeArticleHtml } from '@/lib/sanitize'
 import { excerpt, stripHtml } from '@/lib/excerpt'
 
-export const dynamic = 'force-dynamic'
-
-export const generateMetadata = async ({ params }: { params: Promise<{ id: string }> }) => {
-    const { id } = await params
-    const articleId = Number(id)
-    if (!Number.isFinite(articleId) || articleId <= 0) return {}
-    const [article] = await db
-        .select({ title: articles.titleOriginal, content: articles.contentOriginal })
-        .from(articles)
-        .where(eq(articles.id, articleId))
-        .limit(1)
-    if (!article) return {}
-    return { title: article.title, description: excerpt(stripHtml(article.content ?? ''), 150) }
-}
-
-const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
-const LOCALE_BY_LANG: Record<string, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' }
-
-const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
-    const { id } = await params
-    const articleId = Number(id)
-    if (!Number.isFinite(articleId) || articleId <= 0) notFound()
-
+const getArticleData = async (articleId: number) => {
+    'use cache'
+    cacheTag('article', `article:${articleId}`)
     const rows = await db
         .select({
             id: articles.id,
@@ -41,6 +24,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             titleOriginal: articles.titleOriginal,
             contentOriginal: articles.contentOriginal,
             contentTranslatedKo: articles.contentTranslatedKo,
+            translatedAt: articles.translatedAt,
             publishedAt: articles.publishedAt,
             fetchedAt: articles.fetchedAt,
             keywordsExtractedAt: articles.keywordsExtractedAt,
@@ -50,15 +34,41 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
         .leftJoin(sources, eq(articles.sourceId, sources.id))
         .where(eq(articles.id, articleId))
         .limit(1)
-
     const article = rows[0]
-    if (!article) notFound()
-
+    if (!article) {
+        cacheLife('minutes')
+        return null
+    }
+    const enriched = article.keywordsExtractedAt !== null && (article.lang === 'ko' || article.translatedAt !== null)
+    cacheLife(enriched ? 'permanent' : 'minutes')
     const keywords = await db
         .select({ keyword: keywordsExtracted.keyword, score: keywordsExtracted.score })
         .from(keywordsExtracted)
         .where(eq(keywordsExtracted.articleId, article.id))
         .orderBy(desc(keywordsExtracted.score))
+    return { article, keywords }
+}
+
+export const generateMetadata = async ({ params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params
+    const articleId = Number(id)
+    if (!Number.isFinite(articleId) || articleId <= 0) return {}
+    const data = await getArticleData(articleId)
+    if (!data) return {}
+    return { title: data.article.titleOriginal, description: excerpt(stripHtml(data.article.contentOriginal ?? ''), 150) }
+}
+
+const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
+const LOCALE_BY_LANG: Record<string, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' }
+
+const ArticleView = async ({ params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params
+    const articleId = Number(id)
+    if (!Number.isFinite(articleId) || articleId <= 0) notFound()
+
+    const data = await getArticleData(articleId)
+    if (!data) notFound()
+    const { article, keywords } = data
 
     const translatedHtml =
         article.lang !== 'ko' && article.contentTranslatedKo ? sanitizeArticleHtml(article.contentTranslatedKo) : null
@@ -92,6 +102,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                             원문 사이트로 이동 ↗
                         </a>
                     </Button>
+                    <FavoriteButton targetType='article' targetId={article.id} className='ml-1' />
                 </div>
             </div>
 
@@ -157,5 +168,11 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
         </div>
     )
 }
+
+const Page = ({ params }: { params: Promise<{ id: string }> }) => (
+    <Suspense fallback={<p className='text-muted-foreground text-sm'>불러오는 중…</p>}>
+        <ArticleView params={params} />
+    </Suspense>
+)
 
 export default Page
