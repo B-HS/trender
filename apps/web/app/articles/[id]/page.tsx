@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { desc, eq } from 'drizzle-orm'
-import { articles, keywordsExtracted, sources } from '@workspace/db'
+import { articles, keywordsExtracted, sources, desc, eq } from '@workspace/db'
 import { db } from '@/lib/db'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Separator } from '@workspace/ui/components/separator'
-import { ArticleHtml } from '@/components/article-html'
+import { ArticleBody } from '@/components/article-body'
+import { sanitizeArticleHtml } from '@/lib/sanitize'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,6 +26,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             lang: articles.lang,
             titleOriginal: articles.titleOriginal,
             contentOriginal: articles.contentOriginal,
+            contentTranslatedKo: articles.contentTranslatedKo,
             publishedAt: articles.publishedAt,
             fetchedAt: articles.fetchedAt,
             keywordsExtractedAt: articles.keywordsExtractedAt,
@@ -45,6 +46,8 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
         .where(eq(keywordsExtracted.articleId, article.id))
         .orderBy(desc(keywordsExtracted.score))
 
+    const translatedHtml =
+        article.lang !== 'ko' && article.contentTranslatedKo ? sanitizeArticleHtml(article.contentTranslatedKo) : null
     const locale = LOCALE_BY_LANG[article.lang] ?? 'ko-KR'
     const displayDate = article.publishedAt ?? article.fetchedAt
     const displayDateIso = new Date(displayDate).toISOString()
@@ -105,7 +108,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
             <section className='flex flex-col gap-3'>
                 <div className='flex items-baseline gap-2'>
-                    <h2 className='text-xl font-semibold'>원문</h2>
+                    <h2 className='text-xl font-semibold'>본문</h2>
                     {article.contentOriginal ? (
                         <span className='text-muted-foreground text-xs tabular-nums'>
                             {article.contentOriginal.length.toLocaleString('ko-KR')}자
@@ -118,7 +121,11 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                             <CardTitle className='text-base leading-snug'>{article.titleOriginal}</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ArticleHtml html={article.contentOriginal} />
+                            <ArticleBody
+                                originalHtml={sanitizeArticleHtml(article.contentOriginal)}
+                                translatedHtml={translatedHtml}
+                                untranslated={article.lang !== 'ko' && !translatedHtml}
+                            />
                         </CardContent>
                     </Card>
                 ) : (

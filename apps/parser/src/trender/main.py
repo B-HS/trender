@@ -13,11 +13,12 @@ from trender.pipeline.collect import collect_all
 from trender.pipeline.evolve import evolve_sources
 from trender.pipeline.extract_keywords import extract_pending
 from trender.pipeline.report import backfill_reports, generate_all_languages, generate_report
+from trender.pipeline.translate import translate_pending
 from trender.seeds.loader import sync_seeds
 
 log = get_logger(__name__)
 
-Task = Literal["seed", "collect", "keywords", "report", "backfill", "catchup", "evolve", "all"]
+Task = Literal["seed", "collect", "keywords", "translate", "report", "backfill", "catchup", "evolve", "all"]
 
 
 async def _run_report(kind: ReportKind, lang: Lang | None) -> None:
@@ -42,6 +43,9 @@ async def _run_task(task: Task, kind: str, lang: Lang | None, limit: int, days: 
     elif task == "keywords":
         await extract_pending(limit=limit)
         mark_task_done("keywords")
+    elif task == "translate":
+        await translate_pending(limit=limit)
+        mark_task_done("translate")
     elif task == "report":
         await _run_report(kind, lang)  # type: ignore[arg-type]
     elif task == "backfill":
@@ -60,6 +64,8 @@ async def _run_task(task: Task, kind: str, lang: Lang | None, limit: int, days: 
         mark_task_done("collect")
         await extract_pending(limit=limit)
         mark_task_done("keywords")
+        await translate_pending(limit=limit)
+        mark_task_done("translate")
         await _run_report(kind, lang)
         evolve_sources()
     else:
@@ -71,7 +77,7 @@ def cli() -> None:
     parser.add_argument(
         "--task",
         required=True,
-        choices=["seed", "collect", "keywords", "report", "backfill", "catchup", "evolve", "all"],
+        choices=["seed", "collect", "keywords", "translate", "report", "backfill", "catchup", "evolve", "all"],
     )
     parser.add_argument(
         "--force",

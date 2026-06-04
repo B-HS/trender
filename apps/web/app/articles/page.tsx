@@ -1,6 +1,5 @@
-import { count } from 'drizzle-orm'
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
-import { articles } from '@workspace/db'
+import { articles, count } from '@workspace/db'
 import { db } from '@/lib/db'
 import { ArticlesView } from './articles-view'
 import { loadActiveSources, loadArticles, loadTopKeywords, type KeywordMode, type Lang } from './actions'

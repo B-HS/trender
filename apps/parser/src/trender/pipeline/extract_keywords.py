@@ -10,7 +10,7 @@ from trender.db.repositories import (
     mark_article_keywords_extracted,
 )
 from trender.llm.base import KEYWORD_EXTRACTION_SYSTEM_PROMPT, LLMClient
-from trender.llm.chain import build_default_chain
+from trender.llm.chain import build_chain
 from trender.logging import get_logger
 
 log = get_logger(__name__)
@@ -179,7 +179,7 @@ async def _extract_one(client: LLMClient, article: Article) -> int:
 
 
 async def extract_pending(limit: int = 60) -> int:
-    chain = build_default_chain()
+    chain = build_chain("light")
     articles = fetch_articles_missing_keywords(limit=limit)
     log.info("keywords.start", count=len(articles))
     done = 0

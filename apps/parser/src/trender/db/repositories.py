@@ -105,6 +105,36 @@ def update_article_content(article_id: int, content_original: str) -> None:
         )
 
 
+def fetch_articles_missing_translation(limit: int = 60) -> list[Article]:
+    """한국어가 아니면서 아직 한국어 번역이 없는, 본문이 있는 기사를 가져온다."""
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT * FROM articles
+            WHERE lang <> 'ko'
+              AND translated_at IS NULL
+              AND content_original IS NOT NULL
+              AND CHAR_LENGTH(content_original) > 0
+            ORDER BY fetched_at DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [Article(**row) for row in cur.fetchall()]  # type: ignore[arg-type]
+
+
+def update_article_translation(article_id: int, title_translated_ko: str, content_translated_ko: str) -> None:
+    with cursor() as cur:
+        cur.execute(
+            """
+            UPDATE articles
+            SET title_translated_ko=%s, content_translated_ko=%s, translated_at=NOW()
+            WHERE id=%s
+            """,
+            (title_translated_ko, content_translated_ko, article_id),
+        )
+
+
 def insert_keywords(article_id: int, keywords: Iterable[KeywordExtracted]) -> None:
     rows = [(article_id, k.keyword, k.score) for k in keywords]
     if not rows:

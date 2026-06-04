@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Callable, Literal, Sequence
 
 from trender.config import Settings, get_settings
 from trender.llm.base import AllProvidersFailedError, LLMClient
@@ -45,43 +45,50 @@ class FallbackChain(LLMClient):
                     log.warning("llm.close_failed", provider=client.name, error=str(e))
 
 
-ProviderBuilder = Callable[[Settings], LLMClient | None]
+ChainRole = Literal["report", "light"]
+ProviderBuilder = Callable[[Settings, ChainRole], LLMClient | None]
 
 
-def _build_ollama_cloud(s: Settings) -> LLMClient | None:
+def _pick_model(role: ChainRole, light_model: str | None, default_model: str) -> str:
+    """role 이 light 이고 경량 모델이 지정돼 있으면 그것을, 아니면 기본 모델을 쓴다."""
+    return light_model if role == "light" and light_model else default_model
+
+
+def _build_ollama_cloud(s: Settings, role: ChainRole) -> LLMClient | None:
     if not s.ollama_cloud_key:
         return None
-    return OllamaCloudClient(api_key=s.ollama_cloud_key, host=s.ollama_cloud_host, model=s.ollama_cloud_model)
+    model = _pick_model(role, s.ollama_cloud_model_light, s.ollama_cloud_model)
+    return OllamaCloudClient(api_key=s.ollama_cloud_key, host=s.ollama_cloud_host, model=model)
 
 
-def _build_ollama_local(s: Settings) -> LLMClient | None:
+def _build_ollama_local(s: Settings, role: ChainRole) -> LLMClient | None:
     if not s.ollama_host:
         return None
     return OllamaLocalClient(
         host=s.ollama_host,
-        model=s.ollama_local_model,
+        model=_pick_model(role, s.ollama_local_model_light, s.ollama_local_model),
         num_ctx=s.ollama_num_ctx,
         timeout=s.ollama_timeout_seconds,
     )
 
 
-def _build_omlx_local(s: Settings) -> LLMClient | None:
-    return OmlxLocalClient(host=s.omlx_host, model=s.omlx_model)
+def _build_omlx_local(s: Settings, role: ChainRole) -> LLMClient | None:
+    return OmlxLocalClient(host=s.omlx_host, model=_pick_model(role, s.omlx_model_light, s.omlx_model))
 
 
-def _build_openrouter(s: Settings) -> LLMClient | None:
+def _build_openrouter(s: Settings, role: ChainRole) -> LLMClient | None:
     if not s.openrouter_api_key:
         return None
     return OpenRouterClient(
         api_key=s.openrouter_api_key,
-        model=s.openrouter_model,
+        model=_pick_model(role, s.openrouter_model_light, s.openrouter_model),
         host=s.openrouter_host,
         referer=s.openrouter_referer,
         app_title=s.openrouter_app_title,
     )
 
 
-def _build_openai_oauth(s: Settings) -> LLMClient | None:
+def _build_openai_oauth(s: Settings, role: ChainRole) -> LLMClient | None:
     auth_file = Path(s.openai_oauth_auth_file).expanduser() if s.openai_oauth_auth_file else None
     has_explicit = bool(s.openai_oauth_token)
     has_auth_file = (auth_file or (Path.home() / ".codex" / "auth.json")).exists() if auth_file else (
@@ -90,7 +97,7 @@ def _build_openai_oauth(s: Settings) -> LLMClient | None:
     if not has_explicit and not has_auth_file:
         return None
     return OpenAIOAuthClient(
-        model=s.openai_oauth_model,
+        model=_pick_model(role, s.openai_oauth_model_light, s.openai_oauth_model),
         base_url=s.openai_oauth_base_url,
         explicit_token=s.openai_oauth_token,
         auth_file=auth_file,
@@ -106,7 +113,8 @@ _BUILDERS: dict[str, ProviderBuilder] = {
 }
 
 
-def build_default_chain() -> FallbackChain:
+def build_chain(role: ChainRole = "report") -> FallbackChain:
+    """role 별 모델로 fallback 체인을 만든다. report=무거운 요약 모델, light=키워드/번역용 경량 모델."""
     settings = get_settings()
     order = [p.strip() for p in settings.llm_providers.split(",") if p.strip()]
     clients: list[LLMClient] = []
@@ -116,14 +124,14 @@ def build_default_chain() -> FallbackChain:
             log.warning("llm.unknown_provider", provider=provider)
             continue
         try:
-            client = builder(settings)
+            client = builder(settings, role)
         except Exception as e:
             log.warning("llm.build_failed", provider=provider, error=str(e))
             continue
         if client is None:
             log.info("llm.skip_unconfigured", provider=provider)
             continue
-        log.info("llm.registered", provider=provider, client=client.name)
+        log.info("llm.registered", provider=provider, client=client.name, role=role)
         clients.append(client)
     if not clients:
         raise RuntimeError(
@@ -131,3 +139,7 @@ def build_default_chain() -> FallbackChain:
             "Set at least one provider's credentials in .env"
         )
     return FallbackChain(clients)
+
+
+def build_default_chain() -> FallbackChain:
+    return build_chain("report")

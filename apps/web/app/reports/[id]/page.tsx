@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { asc, desc, eq, inArray } from 'drizzle-orm'
-import { reports, reportItems, articles, keywordsExtracted } from '@workspace/db'
+import { reports, reportItems, articles, keywordsExtracted, asc, desc, eq, inArray } from '@workspace/db'
 import { db } from '@/lib/db'
 import { Badge } from '@workspace/ui/components/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Separator } from '@workspace/ui/components/separator'
 import { Markdown } from '@/components/markdown'
+import { linkifyCitations } from '@/lib/citations'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,6 +64,9 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
         keywordsByArticle.set(k.articleId, list)
     }
 
+    const articleIdByRank = new Map(items.map((it) => [it.rank, it.articleId]))
+    const linkedMarkdown = linkifyCitations(report.markdown, articleIdByRank)
+
     return (
         <div className='flex flex-col gap-8 sm:gap-10'>
             <div className='flex flex-col gap-3'>
@@ -80,7 +83,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 <h1 className='text-2xl leading-tight font-semibold sm:text-3xl'>{report.title}</h1>
             </div>
 
-            <Markdown source={report.markdown} />
+            <Markdown source={linkedMarkdown} />
 
             <Separator />
 

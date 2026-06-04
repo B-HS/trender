@@ -74,6 +74,19 @@ def build_report_system_prompt(lang: Lang) -> str:
     )
 
 
+ARTICLE_TRANSLATION_SYSTEM_PROMPT = (
+    "You are a professional translator who renders foreign tech/AI news articles into natural, fluent Korean (한국어).\n"
+    "The input is the article body as HTML. Translate it into Korean while preserving the HTML structure.\n"
+    "\n"
+    "Hard rules:\n"
+    "- Output ONLY the translated HTML. No prose, no commentary, no markdown code fences.\n"
+    "- Keep every HTML tag, attribute, and URL exactly as in the input. Translate ONLY human-readable text nodes.\n"
+    "- Keep proper nouns (product, company, person, code identifiers) in their original form; you may add a Korean gloss only when natural.\n"
+    "- Do not summarize, omit, or add content. Translate faithfully and completely.\n"
+    "- Preserve numbers, dates, prices, and quotes exactly.\n"
+)
+
+
 class LLMClient(ABC):
     name: str
 

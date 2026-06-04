@@ -38,7 +38,8 @@ _USER_PROMPT_BY_LANG: dict[Lang, str] = {
     "ko": (
         "아래는 {start} ~ {end} 기간({kind_label})에 수집된 AI/테크 관련 한국어 기사 원문 목록이다.\n"
         "기사들의 원문을 빠짐없이 읽고, 이 기간의 흐름을 정리하는 한국어 마크다운 리포트를 작성해라.\n"
-        "분량 제한 없이 매우 상세하게 써도 좋다. 정보 손실을 최소화하는 데 우선순위를 둔다.\n\n"
+        "분량 제한 없이 매우 상세하게 써라. 표면적 요약을 피하고, 각 섹션과 항목을 충분한 분량으로 깊이 있게 풀어 쓴다.\n"
+        "각 항목은 단순 나열이 아니라 배경·맥락·시사점까지 서술하고, 정보 손실을 최소화하는 데 최우선 순위를 둔다.\n\n"
         "리포트 구조 (반드시 지킬 것):\n"
         "1. `# 제목` — 이번 기간을 관통하는 한 줄 제목\n"
         "2. 2~3문단 도입 — 이번 기간의 가장 큰 흐름·맥락\n"
@@ -57,7 +58,8 @@ _USER_PROMPT_BY_LANG: dict[Lang, str] = {
     "ja": (
         "以下は {start} 〜 {end} の期間（{kind_label}）に収集された AI／テック関連の日本語記事の本文一覧である。\n"
         "全記事の本文を漏れなく読み、この期間の流れを総括する日本語マークダウンレポートを作成せよ。\n"
-        "分量制限はなく、非常に詳細に書いてよい。情報欠落を最小化することを最優先する。\n\n"
+        "分量制限はなく、非常に詳細に書け。表面的な要約を避け、各セクション・各項目を十分な分量で掘り下げて記述する。\n"
+        "各項目は単なる列挙ではなく、背景・文脈・示唆まで述べ、情報欠落の最小化を最優先する。\n\n"
         "レポート構成（必ず守ること）：\n"
         "1. `# タイトル` — 期間全体を貫く一行タイトル\n"
         "2. 2〜3 段落の導入 — 期間中の最も大きな流れ・文脈\n"
@@ -76,7 +78,8 @@ _USER_PROMPT_BY_LANG: dict[Lang, str] = {
     "en": (
         "Below are the full-text English articles on AI/tech collected for the period {start} – {end} ({kind_label}).\n"
         "Read every article in full and write a comprehensive English markdown report that captures the period's storyline.\n"
-        "There is no length limit; favor depth and detail to minimize information loss.\n\n"
+        "There is no length limit; write at length. Avoid surface-level summary and develop each section and item in depth.\n"
+        "Treat each item as analysis, not a list: cover background, context, and implications, prioritizing minimal information loss.\n\n"
         "Required structure:\n"
         "1. `# Title` — a single-line title that captures the period\n"
         "2. 2–3 paragraph intro — the dominant narrative and context of the period\n"
@@ -95,8 +98,8 @@ _USER_PROMPT_BY_LANG: dict[Lang, str] = {
 }
 
 
-_BODY_CHAR_LIMIT = 2000
-_MAX_TOTAL_BODY_CHARS = 50000
+_BODY_CHAR_LIMIT = 6000
+_MAX_TOTAL_BODY_CHARS = 200000
 
 
 def _cap_articles(articles: list[Article]) -> list[Article]:

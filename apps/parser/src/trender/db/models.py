@@ -33,6 +33,9 @@ class Article(_Base):
     lang: Lang
     title_original: str
     content_original: str | None = None
+    title_translated_ko: str | None = None
+    content_translated_ko: str | None = None
+    translated_at: datetime | None = None
     published_at: datetime | None = None
     fetched_at: datetime | None = None
     keywords_extracted_at: datetime | None = None
