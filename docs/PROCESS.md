@@ -41,6 +41,6 @@
 - 즐겨찾기 GET 401은 `useFavorites(Boolean(me))` 게이팅으로 미로그인 시 호출 안 됨 → 추가 대응 불필요.
 
 ## 멈춤 포인트
-- 백업: `ssr` 브랜치(cfe8c1c) = 캐싱·로그인·즐겨찾기·Analytics 이전의 순수 SSR. 현재 `dev`는 SSR + 로그인/즐겨찾기/Analytics(캐싱만 제거).
+- `ssr` 백업 브랜치는 삭제함(캐싱 revert 검증 완료, 더는 불필요). 그 시점 커밋 `cfe8c1c`는 `dev` history에 남아 있어 필요 시 `git checkout cfe8c1c`로 복원 가능. 현재 `dev`는 SSR + 로그인/즐겨찾기/Analytics(캐싱만 제거).
 - DB 마이그레이션 0006(users/sessions/favorites)은 적용 완료.
 - 커밋 author는 사용자 단독, co-author 트레일러 금지(과거 로그 스타일).
