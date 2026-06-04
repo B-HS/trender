@@ -145,7 +145,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
 
     return (
         <div className='flex flex-col gap-6'>
-            <section className='border-border/60 bg-card/40 flex flex-col gap-3 rounded-none border p-4'>
+            <section className='bg-card/40 flex flex-col gap-3 rounded-none p-4 ring-1 ring-foreground/10'>
                 <div className='flex flex-wrap items-center gap-2'>
                     {LANG_OPTIONS.map((opt) => {
                         const active = lang === opt.value
@@ -164,6 +164,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                     <select
                         value={sourceId ?? ''}
                         onChange={(e) => setSourceId(e.target.value ? Number(e.target.value) : null)}
+                        aria-label='소스 필터'
                         className='border-border bg-background hover:bg-muted focus:ring-ring/40 h-6 max-w-[200px] cursor-pointer truncate rounded-none border px-2 text-xs outline-none focus:ring-1'>
                         <option value=''>전체 소스</option>
                         {sourceOptions.map((s) => (
@@ -179,7 +180,8 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         placeholder='제목·키워드 검색…'
-                        className='border-border bg-background placeholder:text-muted-foreground/60 focus:ring-ring/40 h-8 w-full rounded-none border px-3 text-sm outline-none focus:ring-1'
+                        aria-label='기사 검색'
+                        className='border-border bg-background placeholder:text-muted-foreground/70 focus:ring-ring/40 h-8 w-full rounded-none border px-3 text-sm outline-none focus:ring-1'
                     />
                     {isFiltered ? (
                         <Button size='sm' variant='ghost' onClick={handleReset} className='shrink-0'>
@@ -201,12 +203,10 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                         {keywords.map((kw) => {
                             const active = keywordMode === 'exact' && debouncedQ === kw
                             return (
-                                <Badge
-                                    key={kw}
-                                    variant={active ? 'secondary' : 'outline'}
-                                    onClick={() => pickKeyword(kw)}
-                                    className='hover:bg-muted cursor-pointer font-normal'>
-                                    {kw}
+                                <Badge key={kw} asChild variant={active ? 'secondary' : 'outline'} className='hover:bg-muted font-normal'>
+                                    <button type='button' onClick={() => pickKeyword(kw)} aria-pressed={active}>
+                                        {kw}
+                                    </button>
                                 </Badge>
                             )
                         })}
@@ -253,7 +253,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                         ) : null}
 
                         {isError ? (
-                            <div className='border-destructive/30 bg-destructive/5 text-destructive flex flex-col items-center gap-2 rounded-none border p-4 text-sm'>
+                            <div className='bg-destructive/5 text-destructive flex flex-col items-center gap-2 rounded-none p-4 text-sm ring-1 ring-destructive/30'>
                                 <span>{error?.message ?? '기사를 불러오지 못했습니다'}</span>
                                 <Button size='sm' variant='outline' onClick={() => fetchNextPage()}>
                                     다시 시도
@@ -273,7 +273,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                         ) : null}
 
                         {!hasNextPage && !isError ? (
-                            <p className='text-muted-foreground/60 py-6 text-center text-xs'>마지막 기사입니다</p>
+                            <p className='text-muted-foreground/70 py-6 text-center text-xs'>마지막 기사입니다</p>
                         ) : null}
                     </>
                 )}

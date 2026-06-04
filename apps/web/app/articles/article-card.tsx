@@ -15,7 +15,7 @@ export const ArticleCard: FC<ArticleCardProps> = ({ article: a }) => {
     const displayDate = a.publishedAt ?? a.fetchedAt
     const locale = LOCALE_BY_LANG[a.lang] ?? 'ko-KR'
     return (
-        <Card className='group hover:border-foreground/20 overflow-hidden transition-all duration-200 hover:shadow-sm'>
+        <Card className='group hover:ring-foreground/20 overflow-hidden transition-all duration-200 hover:shadow-sm'>
             <CardHeader className='gap-2 pb-2'>
                 <div className='flex flex-wrap items-center gap-2'>
                     <Badge variant='secondary' className='font-normal'>
@@ -42,7 +42,7 @@ export const ArticleCard: FC<ArticleCardProps> = ({ article: a }) => {
                     ))}
                 </CardContent>
             ) : (
-                <CardContent className='text-muted-foreground/50 text-xs italic'>키워드 추출 대기 중</CardContent>
+                <CardContent className='text-muted-foreground/70 text-xs italic'>키워드 추출 대기 중</CardContent>
             )}
             <CardFooter className='flex justify-end pt-2'>
                 <a

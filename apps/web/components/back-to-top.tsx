@@ -18,7 +18,7 @@ export const BackToTop = () => {
         <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             aria-label='맨 위로'
-            className='bg-background/80 text-muted-foreground hover:text-foreground hover:bg-accent fixed right-5 bottom-5 z-50 rounded-none border p-2.5 shadow-sm backdrop-blur transition-colors'>
+            className='bg-background/80 text-muted-foreground hover:text-foreground hover:bg-accent fixed right-5 bottom-5 z-50 rounded-none p-2.5 shadow-sm ring-1 ring-foreground/10 backdrop-blur transition-colors'>
             <ArrowUp size={18} weight='bold' />
         </button>
     )

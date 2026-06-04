@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 export const SiteNav = () => {
   return (
     <header className="border-b">
-      <nav className="mx-auto flex max-w-5xl items-center gap-6 px-6 py-4 text-sm">
+      <nav className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-3 text-sm sm:gap-6">
         <Link href="/" className="font-semibold">
           Trender
         </Link>

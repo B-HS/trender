@@ -9,7 +9,7 @@ export const ThemeToggle = () => {
 
     useEffect(() => setMounted(true), [])
 
-    if (!mounted) return <span className='size-8' aria-hidden='true' />
+    if (!mounted) return <span className='size-6' aria-hidden='true' />
 
     const isDark = resolvedTheme === 'dark'
 
@@ -17,8 +17,8 @@ export const ThemeToggle = () => {
         <button
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
             aria-label={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
-            className='text-muted-foreground hover:text-foreground hover:bg-accent rounded-none p-1.5 transition-colors'>
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            className='text-muted-foreground hover:text-foreground hover:bg-accent rounded-none p-1 transition-colors'>
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
         </button>
     )
 }

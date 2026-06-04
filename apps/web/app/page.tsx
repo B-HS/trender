@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { stripMarkdown } from '@/lib/excerpt'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components/card'
 import { Badge } from '@workspace/ui/components/badge'
-import { cn } from '@workspace/ui/lib/utils'
+import { Button } from '@workspace/ui/components/button'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,29 +60,21 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; k
                 <div className='flex flex-wrap items-center gap-2'>
                     <span className='text-muted-foreground/70 mr-1 text-xs'>언어</span>
                     {LANGS.map((l) => (
-                        <Link
-                            key={l}
-                            href={buildHref(l, kind)}
-                            className={cn(
-                                'rounded-none border px-3 py-1.5 text-sm transition-colors',
-                                l === lang ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:text-foreground',
-                            )}>
-                            {LANG_LABEL[l]}
-                        </Link>
+                        <Button key={l} asChild size='xs' variant={l === lang ? 'secondary' : 'ghost'}>
+                            <Link href={buildHref(l, kind)} aria-current={l === lang ? 'page' : undefined}>
+                                {LANG_LABEL[l]}
+                            </Link>
+                        </Button>
                     ))}
                 </div>
                 <div className='flex flex-wrap items-center gap-2'>
                     <span className='text-muted-foreground/70 mr-1 text-xs'>기간</span>
                     {KINDS.map((k) => (
-                        <Link
-                            key={k}
-                            href={buildHref(lang, k)}
-                            className={cn(
-                                'rounded-none border px-3 py-1.5 text-sm transition-colors',
-                                k === kind ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:text-foreground',
-                            )}>
-                            {KIND_LABEL[k][lang]}
-                        </Link>
+                        <Button key={k} asChild size='xs' variant={k === kind ? 'secondary' : 'ghost'}>
+                            <Link href={buildHref(lang, k)} aria-current={k === kind ? 'page' : undefined}>
+                                {KIND_LABEL[k][lang]}
+                            </Link>
+                        </Button>
                     ))}
                 </div>
             </div>

@@ -58,7 +58,7 @@ export const ReportBody: FC<ReportBodyProps> = ({ originalMarkdown, translatedMa
             ) : null}
 
             {headings.length >= 3 ? (
-                <details className='bg-card/40 border-border/60 rounded-none border px-4 py-3 text-sm'>
+                <details className='bg-card/40 rounded-none px-4 py-3 text-sm ring-1 ring-foreground/10'>
                     <summary className='text-muted-foreground cursor-pointer font-medium select-none'>목차</summary>
                     <ul className='mt-2 flex flex-col gap-1'>
                         {headings.map((h) => (
