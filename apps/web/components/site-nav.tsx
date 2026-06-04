@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export const SiteNav = () => {
   return (
@@ -13,6 +14,9 @@ export const SiteNav = () => {
         <Link href="/articles" className="text-muted-foreground hover:text-foreground">
           기사
         </Link>
+        <div className="ml-auto">
+          <ThemeToggle />
+        </div>
       </nav>
     </header>
   )

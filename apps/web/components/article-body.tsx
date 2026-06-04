@@ -1,8 +1,8 @@
 'use client'
-import { useState } from 'react'
 import type { FC } from 'react'
 import { Button } from '@workspace/ui/components/button'
 import { PROSE_CLASSNAME } from '@/lib/prose'
+import { useTranslationPreference } from '@/lib/use-translation-preference'
 
 type ArticleBodyProps = {
     originalHtml: string
@@ -11,7 +11,7 @@ type ArticleBodyProps = {
 }
 
 export const ArticleBody: FC<ArticleBodyProps> = ({ originalHtml, translatedHtml, untranslated }) => {
-    const [showTranslated, setShowTranslated] = useState(false)
+    const [showTranslated, setShowTranslated] = useTranslationPreference()
 
     if (!translatedHtml)
         return (

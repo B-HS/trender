@@ -7,8 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/componen
 import { Separator } from '@workspace/ui/components/separator'
 import { ReportBody } from '@/components/report-body'
 import { linkifyCitations } from '@/lib/citations'
+import { excerpt, stripMarkdown } from '@/lib/excerpt'
 
 export const dynamic = 'force-dynamic'
+
+export const generateMetadata = async ({ params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params
+    const reportId = Number(id)
+    if (!Number.isFinite(reportId)) return {}
+    const [report] = await db.select({ title: reports.title, markdown: reports.markdown }).from(reports).where(eq(reports.id, reportId)).limit(1)
+    if (!report) return {}
+    return { title: report.title, description: excerpt(stripMarkdown(report.markdown), 150) }
+}
 
 const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
 const LOCALE_BY_LANG: Record<string, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' }

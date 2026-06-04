@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { reports, and, desc, eq, type SQL } from '@workspace/db'
 import { db } from '@/lib/db'
+import { stripMarkdown } from '@/lib/excerpt'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components/card'
 import { Badge } from '@workspace/ui/components/badge'
 import { cn } from '@workspace/ui/lib/utils'
@@ -31,19 +32,6 @@ const buildHref = (lang: Lang, kind: Kind) => {
     const qs = sp.toString()
     return qs ? `/?${qs}` : '/'
 }
-
-const stripMarkdown = (md: string) =>
-    md
-        .replace(/```[\s\S]*?```/g, ' ')
-        .replace(/`([^`]+)`/g, '$1')
-        .replace(/^#+\s*/gm, '')
-        .replace(/\*\*([^*]+)\*\*/g, '$1')
-        .replace(/\*([^*]+)\*/g, '$1')
-        .replace(/^[-*+]\s+/gm, '')
-        .replace(/^\d+\.\s+/gm, '')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-        .replace(/\s+/g, ' ')
-        .trim()
 
 const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; kind?: string }> }) => {
     const sp = await searchParams

@@ -8,8 +8,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/componen
 import { Separator } from '@workspace/ui/components/separator'
 import { ArticleBody } from '@/components/article-body'
 import { sanitizeArticleHtml } from '@/lib/sanitize'
+import { excerpt, stripHtml } from '@/lib/excerpt'
 
 export const dynamic = 'force-dynamic'
+
+export const generateMetadata = async ({ params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params
+    const articleId = Number(id)
+    if (!Number.isFinite(articleId) || articleId <= 0) return {}
+    const [article] = await db
+        .select({ title: articles.titleOriginal, content: articles.contentOriginal })
+        .from(articles)
+        .where(eq(articles.id, articleId))
+        .limit(1)
+    if (!article) return {}
+    return { title: article.title, description: excerpt(stripHtml(article.content ?? ''), 150) }
+}
 
 const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
 const LOCALE_BY_LANG: Record<string, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' }
