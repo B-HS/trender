@@ -28,15 +28,15 @@ const ArticleSkeleton: FC = () => (
     <Card className='overflow-hidden'>
         <CardHeader className='gap-2 pb-2'>
             <div className='flex gap-2'>
-                <div className='bg-muted h-5 w-14 animate-pulse rounded' />
-                <div className='bg-muted h-4 w-20 animate-pulse rounded' />
+                <div className='bg-muted h-5 w-14 animate-pulse rounded-none' />
+                <div className='bg-muted h-4 w-20 animate-pulse rounded-none' />
             </div>
-            <div className='bg-muted h-5 w-3/4 animate-pulse rounded' />
+            <div className='bg-muted h-5 w-3/4 animate-pulse rounded-none' />
         </CardHeader>
         <CardContent className='space-y-2'>
-            <div className='bg-muted h-4 w-full animate-pulse rounded' />
-            <div className='bg-muted h-4 w-11/12 animate-pulse rounded' />
-            <div className='bg-muted h-4 w-4/6 animate-pulse rounded' />
+            <div className='bg-muted h-4 w-full animate-pulse rounded-none' />
+            <div className='bg-muted h-4 w-11/12 animate-pulse rounded-none' />
+            <div className='bg-muted h-4 w-4/6 animate-pulse rounded-none' />
         </CardContent>
     </Card>
 )
@@ -145,7 +145,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
 
     return (
         <div className='flex flex-col gap-6'>
-            <section className='border-border/60 bg-card/40 flex flex-col gap-3 rounded-lg border p-4'>
+            <section className='border-border/60 bg-card/40 flex flex-col gap-3 rounded-none border p-4'>
                 <div className='flex flex-wrap items-center gap-2'>
                     {LANG_OPTIONS.map((opt) => {
                         const active = lang === opt.value
@@ -231,7 +231,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                         <ArticleSkeleton />
                     </>
                 ) : items.length === 0 ? (
-                    <div className='border-border/60 bg-muted/20 text-muted-foreground flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-16 text-center text-sm'>
+                    <div className='border-border/60 bg-muted/20 text-muted-foreground flex flex-col items-center justify-center gap-2 rounded-none border border-dashed px-6 py-16 text-center text-sm'>
                         <p className='text-foreground/80 font-medium'>
                             {isFiltered ? '조건에 맞는 기사가 없습니다' : '아직 수집된 기사가 없습니다'}
                         </p>
@@ -253,7 +253,7 @@ export const ArticlesView: FC<ArticlesViewProps> = ({ initialQuery, sourceOption
                         ) : null}
 
                         {isError ? (
-                            <div className='border-destructive/30 bg-destructive/5 text-destructive flex flex-col items-center gap-2 rounded-lg border p-4 text-sm'>
+                            <div className='border-destructive/30 bg-destructive/5 text-destructive flex flex-col items-center gap-2 rounded-none border p-4 text-sm'>
                                 <span>{error?.message ?? '기사를 불러오지 못했습니다'}</span>
                                 <Button size='sm' variant='outline' onClick={() => fetchNextPage()}>
                                     다시 시도

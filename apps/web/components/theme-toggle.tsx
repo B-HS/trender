@@ -17,7 +17,7 @@ export const ThemeToggle = () => {
         <button
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
             aria-label={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
-            className='text-muted-foreground hover:text-foreground hover:bg-accent rounded-md p-1.5 transition-colors'>
+            className='text-muted-foreground hover:text-foreground hover:bg-accent rounded-none p-1.5 transition-colors'>
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
     )

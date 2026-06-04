@@ -64,7 +64,7 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; k
                             key={l}
                             href={buildHref(l, kind)}
                             className={cn(
-                                'rounded-md border px-3 py-1.5 text-sm transition-colors',
+                                'rounded-none border px-3 py-1.5 text-sm transition-colors',
                                 l === lang ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:text-foreground',
                             )}>
                             {LANG_LABEL[l]}
@@ -78,7 +78,7 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; k
                             key={k}
                             href={buildHref(lang, k)}
                             className={cn(
-                                'rounded-md border px-3 py-1.5 text-sm transition-colors',
+                                'rounded-none border px-3 py-1.5 text-sm transition-colors',
                                 k === kind ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:text-foreground',
                             )}>
                             {KIND_LABEL[k][lang]}
