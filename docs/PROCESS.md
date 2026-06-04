@@ -56,4 +56,10 @@
 - 번역 검증: 5건 ja→ko 번역 성공(HTML 태그 보존, 자연스러운 한국어).
 - **번역 정책 확정(사용자)**: 백로그(약 2,200건) 백필 안 함 → 2,194건 스킵 처리(translated_at 스탬프), **새 기사만** 번역. 번역 없는 비한국어 기사는 "(번역 없음)" 표시. 상세 `docs/acknowledge/translation-policy.md`.
 - drizzle `generate` 정상화 확인("No schema changes"). `migrate`는 journal의 0000 SQL 누락으로 미동작(운영은 수동 SQL 체제). 상세 `docs/acknowledge/drizzle-snapshot-drift.md`.
-- 잔여 선결 이슈(내 작업 아님): `drizzle-orm` 이 web/db 워크스페이스에서 해시 다른 두 인스턴스로 설치돼 typecheck 경계 에러. bun+drizzle optional-peer quirk로 별도 집중 작업 필요(신규 코드엔 에러 0건).
+- drizzle 중복설치 해결: db가 drizzle 연산자를 재-export(`orm.ts`), web은 `@workspace/db`로만 import + web의 `drizzle-orm` 직접 의존 제거 → 단일 인스턴스. 전체 typecheck 통과(web/db/ui).
+
+## 배포 (Docker)
+- 실제 파서는 `docker/compose.yml`의 `parser` 컨테이너에서 **cron**으로 구동. env는 `docker/.env.local`(gitignore)에서 로드.
+- cron 자식은 컨테이너 env를 못 받아 `entrypoint.sh`가 **화이트리스트 변수만** `/etc/trender.env`로 덤프 → 신규 `*_MODEL_LIGHT`를 화이트리스트에 추가함(누락 시 keyword/translate가 light 모델 못 받고 report 모델로 폴백).
+- `docker/.env.local` 반영 완료: `OLLAMA_CLOUD_MODEL=deepseek-v4-flash:cloud`, `OLLAMA_CLOUD_MODEL_LIGHT=gemma4:31b-cloud`.
+- 코드/entrypoint는 이미지에 COPY되므로 **재빌드 필요**: `cd docker && docker compose up -d --build`.
