@@ -9,6 +9,7 @@ from trender.db.repositories import (
     insert_keywords,
     mark_article_keywords_extracted,
 )
+from trender.concurrency import run_concurrent
 from trender.llm.base import KEYWORD_EXTRACTION_SYSTEM_PROMPT, LLMClient
 from trender.llm.chain import build_chain
 from trender.logging import get_logger
@@ -182,14 +183,17 @@ async def extract_pending(limit: int = 60) -> int:
     chain = build_chain("light")
     articles = fetch_articles_missing_keywords(limit=limit)
     log.info("keywords.start", count=len(articles))
-    done = 0
+
+    async def _worker(article: Article) -> bool:
+        try:
+            await _extract_one(chain, article)
+            return True
+        except Exception as e:
+            log.warning("keywords.article_failed", article_id=article.id, error=str(e))
+            return False
+
     try:
-        for article in articles:
-            try:
-                if await _extract_one(chain, article) >= 0:
-                    done += 1
-            except Exception as e:
-                log.warning("keywords.article_failed", article_id=article.id, error=str(e))
+        done = await run_concurrent(articles, _worker)
     finally:
         await chain.aclose()
     log.info("keywords.finished", done=done, total=len(articles))

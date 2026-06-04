@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     ollama_cloud_host: str = Field(default="https://ollama.com", alias="OLLAMA_CLOUD_HOST")
     ollama_cloud_model: str = Field(default="gpt-oss:120b", alias="OLLAMA_CLOUD_MODEL")
     ollama_cloud_model_light: str | None = Field(default=None, alias="OLLAMA_CLOUD_MODEL_LIGHT")
+    ollama_cloud_timeout_seconds: int = Field(default=180, alias="OLLAMA_CLOUD_TIMEOUT_SECONDS")
 
     # Ollama Local
     ollama_host: str = Field(default="http://localhost:11434", alias="OLLAMA_HOST")

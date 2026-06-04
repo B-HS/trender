@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import asyncio
 
+from trender.concurrency import run_concurrent
 from trender.db.connection import cursor
 from trender.db.models import Article
 from trender.llm.chain import build_chain
-from trender.pipeline.translate import _run_concurrent, _translate_one, translate_reports_pending
+from trender.pipeline.translate import _translate_one, translate_reports_pending
 
-_ARTICLE_LIMIT = 200
+_ARTICLE_LIMIT = 100
 
 
 def _fetch_recent_articles(n: int) -> list[Article]:
@@ -48,7 +49,7 @@ async def main() -> None:
             return False
 
     try:
-        done = await _run_concurrent(articles, _worker)
+        done = await run_concurrent(articles, _worker)
     finally:
         await chain.aclose()
     print(f"[articles] translated {done} of {len(articles)}", flush=True)

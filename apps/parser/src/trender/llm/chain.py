@@ -58,7 +58,7 @@ def _build_ollama_cloud(s: Settings, role: ChainRole) -> LLMClient | None:
     if not s.ollama_cloud_key:
         return None
     model = _pick_model(role, s.ollama_cloud_model_light, s.ollama_cloud_model)
-    return OllamaCloudClient(api_key=s.ollama_cloud_key, host=s.ollama_cloud_host, model=model)
+    return OllamaCloudClient(api_key=s.ollama_cloud_key, host=s.ollama_cloud_host, model=model, timeout=s.ollama_cloud_timeout_seconds)
 
 
 def _build_ollama_local(s: Settings, role: ChainRole) -> LLMClient | None:

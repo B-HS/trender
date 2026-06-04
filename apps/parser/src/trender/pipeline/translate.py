@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import re
 
+from trender.concurrency import run_concurrent
 from trender.db.models import Article, Report
 from trender.db.repositories import (
     fetch_articles_missing_translation,
@@ -17,7 +17,6 @@ from trender.logging import get_logger
 log = get_logger(__name__)
 
 _BODY_CHAR_LIMIT = 16000
-_CONCURRENCY = 3
 _TITLE_SYSTEM_PROMPT = "Translate the given news headline into natural Korean. Output ONLY the translated title, with no quotes or commentary."
 
 _FENCE_RE = re.compile(r"^\s*```[a-zA-Z]*\n?|\n?```\s*$")
@@ -41,18 +40,6 @@ async def _translate_one(client: LLMClient, article: Article) -> bool:
     return True
 
 
-async def _run_concurrent(items, worker) -> int:
-    """worker(item)->bool 를 최대 _CONCURRENCY 개씩 동시에 돌리고 True 개수를 센다."""
-    sem = asyncio.Semaphore(_CONCURRENCY)
-
-    async def _guarded(item):
-        async with sem:
-            return await worker(item)
-
-    results = await asyncio.gather(*(_guarded(it) for it in items), return_exceptions=True)
-    return sum(1 for r in results if r is True)
-
-
 async def translate_pending(limit: int = 60) -> int:
     chain = build_chain("light")
     articles = fetch_articles_missing_translation(limit=limit)
@@ -66,7 +53,7 @@ async def translate_pending(limit: int = 60) -> int:
             return False
 
     try:
-        done = await _run_concurrent(articles, _worker)
+        done = await run_concurrent(articles, _worker)
     finally:
         await chain.aclose()
     log.info("translate.finished", done=done, total=len(articles))
@@ -99,7 +86,7 @@ async def translate_reports_pending(limit: int = 60) -> int:
             return False
 
     try:
-        done = await _run_concurrent(reports, _worker)
+        done = await run_concurrent(reports, _worker)
     finally:
         await chain.aclose()
     log.info("translate.reports_finished", done=done, total=len(reports))
