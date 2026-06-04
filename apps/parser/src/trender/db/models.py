@@ -56,6 +56,9 @@ class Report(_Base):
     period_end: date
     title: str
     markdown: str
+    title_translated_ko: str | None = None
+    markdown_translated_ko: str | None = None
+    translated_at: datetime | None = None
     created_at: datetime | None = None
 
 

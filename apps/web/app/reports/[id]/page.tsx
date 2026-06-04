@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import { Badge } from '@workspace/ui/components/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Separator } from '@workspace/ui/components/separator'
-import { Markdown } from '@/components/markdown'
+import { ReportBody } from '@/components/report-body'
 import { linkifyCitations } from '@/lib/citations'
 
 export const dynamic = 'force-dynamic'
@@ -66,6 +66,8 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
     const articleIdByRank = new Map(items.map((it) => [it.rank, it.articleId]))
     const linkedMarkdown = linkifyCitations(report.markdown, articleIdByRank)
+    const translatedMarkdown =
+        report.lang !== 'ko' && report.markdownTranslatedKo ? linkifyCitations(report.markdownTranslatedKo, articleIdByRank) : null
 
     return (
         <div className='flex flex-col gap-8 sm:gap-10'>
@@ -83,7 +85,11 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 <h1 className='text-2xl leading-tight font-semibold sm:text-3xl'>{report.title}</h1>
             </div>
 
-            <Markdown source={linkedMarkdown} />
+            <ReportBody
+                originalMarkdown={linkedMarkdown}
+                translatedMarkdown={translatedMarkdown}
+                untranslated={report.lang !== 'ko' && !report.markdownTranslatedKo}
+            />
 
             <Separator />
 

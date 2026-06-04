@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import re
 
-from trender.db.models import Article
-from trender.db.repositories import fetch_articles_missing_translation, update_article_translation
-from trender.llm.base import ARTICLE_TRANSLATION_SYSTEM_PROMPT, LLMClient
+from trender.db.models import Article, Report
+from trender.db.repositories import (
+    fetch_articles_missing_translation,
+    fetch_reports_missing_translation,
+    update_article_translation,
+    update_report_translation,
+)
+from trender.llm.base import ARTICLE_TRANSLATION_SYSTEM_PROMPT, REPORT_TRANSLATION_SYSTEM_PROMPT, LLMClient
 from trender.llm.chain import build_chain
 from trender.logging import get_logger
 
@@ -49,4 +54,35 @@ async def translate_pending(limit: int = 60) -> int:
     finally:
         await chain.aclose()
     log.info("translate.finished", done=done, total=len(articles))
+    return done
+
+
+async def _translate_report_one(client: LLMClient, report: Report) -> bool:
+    if report.id is None or not report.markdown.strip():
+        return False
+    title_ko = _strip_fence(await client.complete(system=_TITLE_SYSTEM_PROMPT, user=report.title, temperature=0.2))
+    markdown_ko = _strip_fence(await client.complete(system=REPORT_TRANSLATION_SYSTEM_PROMPT, user=report.markdown, temperature=0.2))
+    if not markdown_ko:
+        log.warning("translate.report_empty", report_id=report.id, lang=report.lang)
+        return False
+    update_report_translation(report.id, title_ko or report.title, markdown_ko)
+    log.info("translate.report_done", report_id=report.id, lang=report.lang, chars=len(markdown_ko))
+    return True
+
+
+async def translate_reports_pending(limit: int = 60) -> int:
+    chain = build_chain("light")
+    reports = fetch_reports_missing_translation(limit=limit)
+    log.info("translate.reports_start", count=len(reports))
+    done = 0
+    try:
+        for report in reports:
+            try:
+                if await _translate_report_one(chain, report):
+                    done += 1
+            except Exception as e:
+                log.warning("translate.report_failed", report_id=report.id, error=str(e))
+    finally:
+        await chain.aclose()
+    log.info("translate.reports_finished", done=done, total=len(reports))
     return done

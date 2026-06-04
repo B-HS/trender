@@ -8,7 +8,7 @@ from trender.logging import get_logger
 from trender.pipeline.collect import collect_all
 from trender.pipeline.extract_keywords import extract_pending
 from trender.pipeline.report import backfill_reports
-from trender.pipeline.translate import translate_pending
+from trender.pipeline.translate import translate_pending, translate_reports_pending
 
 log = get_logger(__name__)
 
@@ -19,6 +19,7 @@ KEYWORDS_STALE_AFTER = timedelta(minutes=35)
 TRANSLATE_STALE_AFTER = timedelta(minutes=40)
 BACKFILL_DAILY_STALE_AFTER = timedelta(hours=6)
 BACKFILL_WEEKLY_STALE_AFTER = timedelta(days=1)
+TRANSLATE_REPORTS_STALE_AFTER = timedelta(hours=6)
 
 
 def _state_path(task: str) -> Path:
@@ -117,6 +118,18 @@ async def run_catchup(*, force: bool = False, keywords_limit: int = 120) -> dict
             actions["backfill_weekly"] = "failed"
     else:
         actions["backfill_weekly"] = "fresh"
+
+    if force or _is_stale("translate_reports", TRANSLATE_REPORTS_STALE_AFTER):
+        log.info("catchup.run", task="translate_reports", last=str(_last_run("translate_reports")))
+        try:
+            await translate_reports_pending(limit=keywords_limit)
+            mark_task_done("translate_reports", now)
+            actions["translate_reports"] = "ran"
+        except Exception as e:
+            log.warning("catchup.failed", task="translate_reports", error=str(e))
+            actions["translate_reports"] = "failed"
+    else:
+        actions["translate_reports"] = "fresh"
 
     log.info("catchup.done", **actions)
     return actions

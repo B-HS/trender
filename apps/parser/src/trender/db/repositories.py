@@ -172,6 +172,33 @@ def report_exists(kind: str, lang: Lang, period_start: date, period_end: date) -
         return cur.fetchone() is not None
 
 
+def fetch_reports_missing_translation(limit: int = 60) -> list[Report]:
+    """한국어가 아니면서 아직 한국어 번역이 없는 리포트를 가져온다."""
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT * FROM reports
+            WHERE lang <> 'ko' AND translated_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [Report(**row) for row in cur.fetchall()]  # type: ignore[arg-type]
+
+
+def update_report_translation(report_id: int, title_translated_ko: str, markdown_translated_ko: str) -> None:
+    with cursor() as cur:
+        cur.execute(
+            """
+            UPDATE reports
+            SET title_translated_ko=%s, markdown_translated_ko=%s, translated_at=NOW()
+            WHERE id=%s
+            """,
+            (title_translated_ko, markdown_translated_ko, report_id),
+        )
+
+
 def insert_report(report: Report) -> int:
     with cursor() as cur:
         cur.execute(
@@ -181,6 +208,9 @@ def insert_report(report: Report) -> int:
             ON DUPLICATE KEY UPDATE
               title = VALUES(title),
               markdown = VALUES(markdown),
+              title_translated_ko = NULL,
+              markdown_translated_ko = NULL,
+              translated_at = NULL,
               id = LAST_INSERT_ID(id)
             """,
             (report.kind, report.lang, report.period_start, report.period_end, report.title, report.markdown),

@@ -91,6 +91,9 @@ export const reports = mysqlTable(
         periodEnd: date('period_end').notNull(),
         title: varchar('title', { length: 512 }).notNull(),
         markdown: mediumtext('markdown').notNull(),
+        titleTranslatedKo: varchar('title_translated_ko', { length: 512 }),
+        markdownTranslatedKo: mediumtext('markdown_translated_ko'),
+        translatedAt: timestamp('translated_at'),
         createdAt: timestamp('created_at').defaultNow().notNull(),
     },
     (t) => ({

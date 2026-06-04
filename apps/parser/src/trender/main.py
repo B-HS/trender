@@ -13,7 +13,7 @@ from trender.pipeline.collect import collect_all
 from trender.pipeline.evolve import evolve_sources
 from trender.pipeline.extract_keywords import extract_pending
 from trender.pipeline.report import backfill_reports, generate_all_languages, generate_report
-from trender.pipeline.translate import translate_pending
+from trender.pipeline.translate import translate_pending, translate_reports_pending
 from trender.seeds.loader import sync_seeds
 
 log = get_logger(__name__)
@@ -45,6 +45,7 @@ async def _run_task(task: Task, kind: str, lang: Lang | None, limit: int, days: 
         mark_task_done("keywords")
     elif task == "translate":
         await translate_pending(limit=limit)
+        await translate_reports_pending(limit=limit)
         mark_task_done("translate")
     elif task == "report":
         await _run_report(kind, lang)  # type: ignore[arg-type]
@@ -67,6 +68,7 @@ async def _run_task(task: Task, kind: str, lang: Lang | None, limit: int, days: 
         await translate_pending(limit=limit)
         mark_task_done("translate")
         await _run_report(kind, lang)
+        await translate_reports_pending(limit=limit)
         evolve_sources()
     else:
         raise SystemExit(f"unknown task: {task}")
