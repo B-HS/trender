@@ -1,6 +1,4 @@
-import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
-import { cacheLife, cacheTag } from 'next/cache'
 import Link from 'next/link'
 import { reports, reportItems, articles, keywordsExtracted, asc, desc, eq, inArray } from '@workspace/db'
 import { db } from '@/lib/db'
@@ -13,14 +11,8 @@ import { linkifyCitations } from '@/lib/citations'
 import { excerpt, stripMarkdown } from '@/lib/excerpt'
 
 const getReportData = async (reportId: number) => {
-    'use cache'
-    cacheTag('report', `report:${reportId}`)
     const [report] = await db.select().from(reports).where(eq(reports.id, reportId)).limit(1)
-    if (!report) {
-        cacheLife('minutes')
-        return null
-    }
-    cacheLife(report.lang === 'ko' || report.markdownTranslatedKo !== null ? 'permanent' : 'minutes')
+    if (!report) return null
     const items = await db
         .select({
             rank: reportItems.rank,
@@ -63,7 +55,7 @@ const KIND_LABEL: Record<string, Record<string, string>> = {
     weekly: { ko: '주간', ja: '週次', en: 'Weekly' },
 }
 
-const ReportView = async ({ params }: { params: Promise<{ id: string }> }) => {
+const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params
     const reportId = Number(id)
     if (!Number.isFinite(reportId)) notFound()
@@ -156,11 +148,5 @@ const ReportView = async ({ params }: { params: Promise<{ id: string }> }) => {
         </div>
     )
 }
-
-const Page = ({ params }: { params: Promise<{ id: string }> }) => (
-    <Suspense fallback={<p className='text-muted-foreground text-sm'>불러오는 중…</p>}>
-        <ReportView params={params} />
-    </Suspense>
-)
 
 export default Page

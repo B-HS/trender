@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import Link from 'next/link'
 import { reports, and, desc, eq, type SQL } from '@workspace/db'
 import { db } from '@/lib/db'
@@ -33,7 +32,7 @@ const buildHref = (lang: Lang, kind: Kind) => {
     return qs ? `/?${qs}` : '/'
 }
 
-const ReportList = async ({ searchParams }: { searchParams: Promise<{ lang?: string; kind?: string }> }) => {
+const Page = async ({ searchParams }: { searchParams: Promise<{ lang?: string; kind?: string }> }) => {
     const sp = await searchParams
     const lang = parseLang(sp.lang)
     const kind = parseKind(sp.kind)
@@ -46,7 +45,11 @@ const ReportList = async ({ searchParams }: { searchParams: Promise<{ lang?: str
     const rows = await db.select().from(reports).where(where).orderBy(desc(reports.periodStart), desc(reports.createdAt)).limit(50)
 
     return (
-        <>
+        <div className='flex flex-col gap-6'>
+            <div className='flex flex-col gap-2'>
+                <h1 className='text-2xl font-semibold sm:text-3xl'>최신 리포트</h1>
+                <p className='text-muted-foreground text-sm'>언어·기간별로 따로 생성된 트렌드 리포트입니다.</p>
+            </div>
             <div className='flex flex-col gap-3'>
                 <div className='flex flex-wrap items-center gap-2'>
                     <span className='text-muted-foreground/70 mr-1 text-xs'>언어</span>
@@ -99,20 +102,8 @@ const ReportList = async ({ searchParams }: { searchParams: Promise<{ lang?: str
                     ))}
                 </div>
             )}
-        </>
+        </div>
     )
 }
-
-const Page = ({ searchParams }: { searchParams: Promise<{ lang?: string; kind?: string }> }) => (
-    <div className='flex flex-col gap-6'>
-        <div className='flex flex-col gap-2'>
-            <h1 className='text-2xl font-semibold sm:text-3xl'>최신 리포트</h1>
-            <p className='text-muted-foreground text-sm'>언어·기간별로 따로 생성된 트렌드 리포트입니다.</p>
-        </div>
-        <Suspense fallback={<p className='text-muted-foreground text-sm'>불러오는 중…</p>}>
-            <ReportList searchParams={searchParams} />
-        </Suspense>
-    </div>
-)
 
 export default Page

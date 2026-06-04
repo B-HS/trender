@@ -27,18 +27,20 @@
 - [x] i. `app/favorites/page.tsx`: 저장한 기사/리포트 목록(서버 컴포넌트, getSessionUser + join)
 - [x] j. typecheck 통과(web/db/ui). **commit·push 안 함**(사용자가 직접)
 
-## 캐싱 — Cache Components(use cache) + PPR (전환 완료)
-- `next.config.ts`(mjs→ts 전환): `cacheComponents: true` + 커스텀 `cacheLife.permanent`(stale 5분 / revalidate 1년 / expire ~395일).
-- 상세 페이지(`reports/[id]`, `articles/[id]`): 데이터 fetch를 `'use cache'` 함수로 — `cacheLife('permanent')` + `cacheTag('report'|'article', '<type>:<id>')`. params 접근은 `<Suspense>`로 감쌈(`ReportView`/`ArticleView`).
-- 동적 페이지(홈/기사목록/책갈피): searchParams·cookies 접근부를 `<Suspense>` 자식으로 분리.
-- 빌드 검증: `bun run build` → `/`,`/articles`,`/articles/[id]`,`/favorites`,`/reports/[id]` 모두 **◐ Partial Prerender**, API는 ƒ Dynamic, 에러 0.
-- 캐싱 결과: 정적 셸 즉시 + 상세 데이터는 1회 로딩 후 캐시(Vercel Data Cache, DB 재접속 최소화). 1년 후 또는 수동 무효화 시 갱신.
-- **수동 무효화**: `POST /api/revalidate` (헤더 `x-revalidate-secret: $REVALIDATE_SECRET`).
-  - 전체 리포트: `{ "type": "report" }` / 특정: `{ "type": "report", "id": 83 }` (article 동일)
-  - 임의 태그/경로: `{ "tag": "report:83" }` 또는 `{ "path": "/reports/83" }`
-  - 내부적으로 `revalidateTag(tag,'max')` + `revalidatePath` 동시.
-- 주의: 로컬 16.1.6은 `revalidateTag(tag, profile)` 2-인자. `updateTag(tag)`는 서버액션 전용 1-인자.
+## 캐싱 — Cache Components(PPR) 도입 후 되돌림 (SSR 복귀)
+- 경위: `cacheComponents: true` + `'use cache'` + `<Suspense>`로 전환했으나, PPR은 동적 구멍(`params` 읽는 상세/목록)을 매 요청 정적 셸(fallback="불러오는 중…") 먼저 → 내용 스트리밍하는 구조라 새로고침마다 fallback이 보임. "한번 렌더 → 통째 캐시 → fallback 없이 바로"는 PPR이 아닌 클래식 ISR/SSR의 동작이라, 사용자 결정으로 **캐싱(PPR)만 제거하고 SSR로 복귀**.
+- 제거 내역(로그인/즐겨찾기/Analytics는 그대로 유지):
+  - `next.config.ts`: `cacheComponents`/`cacheLife` 제거(파일은 .ts 유지).
+  - `reports/[id]`·`articles/[id]`: `'use cache'`/`cacheLife`/`cacheTag` 및 `ReportView`/`ArticleView`+`<Suspense>` 래퍼 제거 → 데이터 함수는 plain async, 본문은 async `Page`로 병합.
+  - 홈(`/`)·기사목록(`/articles`)·책갈피(`/favorites`): `<Suspense>` 분리 해제 → async `Page`로 병합.
+  - `app/api/revalidate/route.ts` 삭제(캐시 없으니 무용), `.env.example`의 `REVALIDATE_SECRET` 제거.
+- 빌드 검증: `bun run build` → 모든 콘텐츠 라우트 `ƒ (Dynamic)` 요청 시 SSR, 타입체크 0 에러.
+
+## 401 silent
+- `/api/auth/me`: 미로그인 시 `fail(401)` → **`ok(null)`(200)**. 새로고침마다 콘솔/네트워크에 뜨던 401 제거. `useMe`는 `clientFetch<Me | null>`로 그대로 null 수신.
+- 즐겨찾기 GET 401은 `useFavorites(Boolean(me))` 게이팅으로 미로그인 시 호출 안 됨 → 추가 대응 불필요.
 
 ## 멈춤 포인트
-- git push 는 사용자가 직접 (자동 금지) — 단 "마이그레이션 끝나면 commit+push는 내가 직접" 지시 받음(과거 로그 스타일, co-author 금지)
-- DB 마이그레이션 0006(users/sessions/favorites) 적용은 사용자 검토/진행
+- 백업: `ssr` 브랜치(cfe8c1c) = 캐싱·로그인·즐겨찾기·Analytics 이전의 순수 SSR. 현재 `dev`는 SSR + 로그인/즐겨찾기/Analytics(캐싱만 제거).
+- DB 마이그레이션 0006(users/sessions/favorites)은 적용 완료.
+- 커밋 author는 사용자 단독, co-author 트레일러 금지(과거 로그 스타일).

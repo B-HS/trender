@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import Link from 'next/link'
 import { favorites, articles, reports, eq, desc, inArray } from '@workspace/db'
 import { db } from '@/lib/db'
@@ -14,7 +13,7 @@ const KIND_LABEL: Record<string, Record<string, string>> = {
     weekly: { ko: '주간', ja: '週次', en: 'Weekly' },
 }
 
-const FavoritesContent = async () => {
+const Page = async () => {
     const user = await getSessionUser()
 
     if (!user)
@@ -107,11 +106,5 @@ const FavoritesContent = async () => {
         </div>
     )
 }
-
-const Page = () => (
-    <Suspense fallback={<p className='text-muted-foreground text-sm'>불러오는 중…</p>}>
-        <FavoritesContent />
-    </Suspense>
-)
 
 export default Page

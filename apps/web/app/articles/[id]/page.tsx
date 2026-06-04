@@ -1,7 +1,5 @@
-import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { cacheLife, cacheTag } from 'next/cache'
 import { articles, keywordsExtracted, sources, desc, eq } from '@workspace/db'
 import { db } from '@/lib/db'
 import { Badge } from '@workspace/ui/components/badge'
@@ -14,8 +12,6 @@ import { sanitizeArticleHtml } from '@/lib/sanitize'
 import { excerpt, stripHtml } from '@/lib/excerpt'
 
 const getArticleData = async (articleId: number) => {
-    'use cache'
-    cacheTag('article', `article:${articleId}`)
     const rows = await db
         .select({
             id: articles.id,
@@ -35,12 +31,7 @@ const getArticleData = async (articleId: number) => {
         .where(eq(articles.id, articleId))
         .limit(1)
     const article = rows[0]
-    if (!article) {
-        cacheLife('minutes')
-        return null
-    }
-    const enriched = article.keywordsExtractedAt !== null && (article.lang === 'ko' || article.translatedAt !== null)
-    cacheLife(enriched ? 'permanent' : 'minutes')
+    if (!article) return null
     const keywords = await db
         .select({ keyword: keywordsExtracted.keyword, score: keywordsExtracted.score })
         .from(keywordsExtracted)
@@ -61,7 +52,7 @@ export const generateMetadata = async ({ params }: { params: Promise<{ id: strin
 const LANG_LABEL: Record<string, string> = { ko: '한국어', ja: '日本語', en: 'English' }
 const LOCALE_BY_LANG: Record<string, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' }
 
-const ArticleView = async ({ params }: { params: Promise<{ id: string }> }) => {
+const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params
     const articleId = Number(id)
     if (!Number.isFinite(articleId) || articleId <= 0) notFound()
@@ -168,11 +159,5 @@ const ArticleView = async ({ params }: { params: Promise<{ id: string }> }) => {
         </div>
     )
 }
-
-const Page = ({ params }: { params: Promise<{ id: string }> }) => (
-    <Suspense fallback={<p className='text-muted-foreground text-sm'>불러오는 중…</p>}>
-        <ArticleView params={params} />
-    </Suspense>
-)
 
 export default Page

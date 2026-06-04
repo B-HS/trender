@@ -10,7 +10,7 @@ export const useMe = () =>
         queryKey: QUERY_KEY.AUTH.ME,
         queryFn: async () => {
             try {
-                return await clientFetch<Me>('/api/auth/me')
+                return await clientFetch<Me | null>('/api/auth/me')
             } catch {
                 return null
             }

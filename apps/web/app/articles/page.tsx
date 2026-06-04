@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { articles, count } from '@workspace/db'
 import { db } from '@/lib/db'
@@ -18,7 +17,7 @@ const parseQ = (v: string | undefined): string | null => {
 }
 const parseKeywordMode = (v: string | undefined): KeywordMode => (v === 'exact' ? 'exact' : 'like')
 
-const ArticlesData = async ({
+const Page = async ({
     searchParams,
 }: {
     searchParams: Promise<{ lang?: string; source?: string; q?: string; mode?: string }>
@@ -43,31 +42,21 @@ const ArticlesData = async ({
     const total = totalRow[0]?.value ?? 0
 
     return (
-        <HydrationBoundary state={dehydrate(queryClient)}>
-            <ArticlesView
-                initialQuery={{ lang, sourceId, q, keywordMode }}
-                sourceOptions={sourceOptions}
-                topKeywords={topKeywords}
-                totalCount={total}
-            />
-        </HydrationBoundary>
+        <div className='flex flex-col gap-6'>
+            <header className='flex flex-col gap-1'>
+                <h1 className='text-2xl font-semibold sm:text-3xl'>수집된 기사</h1>
+                <p className='text-muted-foreground text-sm'>한·일·영 트렌드 기사를 검색·필터링할 수 있습니다.</p>
+            </header>
+            <HydrationBoundary state={dehydrate(queryClient)}>
+                <ArticlesView
+                    initialQuery={{ lang, sourceId, q, keywordMode }}
+                    sourceOptions={sourceOptions}
+                    topKeywords={topKeywords}
+                    totalCount={total}
+                />
+            </HydrationBoundary>
+        </div>
     )
 }
-
-const Page = ({
-    searchParams,
-}: {
-    searchParams: Promise<{ lang?: string; source?: string; q?: string; mode?: string }>
-}) => (
-    <div className='flex flex-col gap-6'>
-        <header className='flex flex-col gap-1'>
-            <h1 className='text-2xl font-semibold sm:text-3xl'>수집된 기사</h1>
-            <p className='text-muted-foreground text-sm'>한·일·영 트렌드 기사를 검색·필터링할 수 있습니다.</p>
-        </header>
-        <Suspense fallback={<p className='text-muted-foreground text-sm'>불러오는 중…</p>}>
-            <ArticlesData searchParams={searchParams} />
-        </Suspense>
-    </div>
-)
 
 export default Page
