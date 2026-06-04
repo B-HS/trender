@@ -75,9 +75,12 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     }
 
     const articleIdByRank = new Map(items.map((it) => [it.rank, it.articleId]))
-    const linkedMarkdown = linkifyCitations(report.markdown, articleIdByRank)
+    const dropLeadingH1 = (md: string) => md.replace(/^\s*#\s.+\n+/, '')
+    const linkedMarkdown = linkifyCitations(dropLeadingH1(report.markdown), articleIdByRank)
     const translatedMarkdown =
-        report.lang !== 'ko' && report.markdownTranslatedKo ? linkifyCitations(report.markdownTranslatedKo, articleIdByRank) : null
+        report.lang !== 'ko' && report.markdownTranslatedKo
+            ? linkifyCitations(dropLeadingH1(report.markdownTranslatedKo), articleIdByRank)
+            : null
 
     return (
         <div className='flex flex-col gap-8 sm:gap-10'>

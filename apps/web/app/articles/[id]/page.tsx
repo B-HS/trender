@@ -4,7 +4,7 @@ import { articles, keywordsExtracted, sources, desc, eq } from '@workspace/db'
 import { db } from '@/lib/db'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
+import { Card, CardContent } from '@workspace/ui/components/card'
 import { Separator } from '@workspace/ui/components/separator'
 import { ArticleBody } from '@/components/article-body'
 import { sanitizeArticleHtml } from '@/lib/sanitize'
@@ -131,9 +131,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 </div>
                 {article.contentOriginal ? (
                     <Card className='overflow-hidden'>
-                        <CardHeader className='gap-1 pb-3'>
-                            <CardTitle className='text-base leading-snug'>{article.titleOriginal}</CardTitle>
-                        </CardHeader>
                         <CardContent>
                             <ArticleBody
                                 originalHtml={sanitizeArticleHtml(article.contentOriginal)}
