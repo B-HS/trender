@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 
 from trender.db.models import Article, Report
@@ -16,6 +17,7 @@ from trender.logging import get_logger
 log = get_logger(__name__)
 
 _BODY_CHAR_LIMIT = 16000
+_CONCURRENCY = 3
 _TITLE_SYSTEM_PROMPT = "Translate the given news headline into natural Korean. Output ONLY the translated title, with no quotes or commentary."
 
 _FENCE_RE = re.compile(r"^\s*```[a-zA-Z]*\n?|\n?```\s*$")
@@ -39,18 +41,32 @@ async def _translate_one(client: LLMClient, article: Article) -> bool:
     return True
 
 
+async def _run_concurrent(items, worker) -> int:
+    """worker(item)->bool 를 최대 _CONCURRENCY 개씩 동시에 돌리고 True 개수를 센다."""
+    sem = asyncio.Semaphore(_CONCURRENCY)
+
+    async def _guarded(item):
+        async with sem:
+            return await worker(item)
+
+    results = await asyncio.gather(*(_guarded(it) for it in items), return_exceptions=True)
+    return sum(1 for r in results if r is True)
+
+
 async def translate_pending(limit: int = 60) -> int:
     chain = build_chain("light")
     articles = fetch_articles_missing_translation(limit=limit)
     log.info("translate.start", count=len(articles))
-    done = 0
+
+    async def _worker(article: Article) -> bool:
+        try:
+            return await _translate_one(chain, article)
+        except Exception as e:
+            log.warning("translate.article_failed", article_id=article.id, error=str(e))
+            return False
+
     try:
-        for article in articles:
-            try:
-                if await _translate_one(chain, article):
-                    done += 1
-            except Exception as e:
-                log.warning("translate.article_failed", article_id=article.id, error=str(e))
+        done = await _run_concurrent(articles, _worker)
     finally:
         await chain.aclose()
     log.info("translate.finished", done=done, total=len(articles))
@@ -74,14 +90,16 @@ async def translate_reports_pending(limit: int = 60) -> int:
     chain = build_chain("light")
     reports = fetch_reports_missing_translation(limit=limit)
     log.info("translate.reports_start", count=len(reports))
-    done = 0
+
+    async def _worker(report: Report) -> bool:
+        try:
+            return await _translate_report_one(chain, report)
+        except Exception as e:
+            log.warning("translate.report_failed", report_id=report.id, error=str(e))
+            return False
+
     try:
-        for report in reports:
-            try:
-                if await _translate_report_one(chain, report):
-                    done += 1
-            except Exception as e:
-                log.warning("translate.report_failed", report_id=report.id, error=str(e))
+        done = await _run_concurrent(reports, _worker)
     finally:
         await chain.aclose()
     log.info("translate.reports_finished", done=done, total=len(reports))
