@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1782192879065,
+      "tag": "0000_wonderful_boom_boom",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1782193274792,
+      "tag": "0001_add_vendor_columns",
+      "breakpoints": true
+    }
+  ]
+}
