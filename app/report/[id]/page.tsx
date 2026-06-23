@@ -20,7 +20,9 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                         {report.kind === 'daily' ? '일일' : '주간'}
                     </Badge>
                     {report.vendor && <Badge className='rounded-xs px-1'>{VENDOR_LABEL[report.vendor]}</Badge>}
-                    <span className='text-sm text-muted-foreground'>{report.periodEnd}</span>
+                    <span className='text-sm text-muted-foreground'>
+                        {report.kind === 'weekly' ? `${report.periodStart} ~ ${report.periodEnd}` : report.periodEnd}
+                    </span>
                 </div>
                 <div className='flex items-start justify-between gap-2'>
                     <h1 className='text-2xl font-extrabold tracking-tight'>{report.title}</h1>

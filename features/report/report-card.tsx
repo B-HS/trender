@@ -24,6 +24,11 @@ export const ReportCard: FC<{ report: ReportListItem }> = ({ report }) => {
             <Link href={`/report/${report.id}`} prefetch={false} className='text-sm font-bold line-clamp-2 hover:underline'>
                 {report.title}
             </Link>
+            {report.kind === 'weekly' && (
+                <p className='text-xs text-muted-foreground'>
+                    {report.periodStart} ~ {report.periodEnd}
+                </p>
+            )}
         </article>
     )
 }

@@ -10,7 +10,7 @@ export const ReportFilter: FC<{ showKind?: boolean; showLang?: boolean }> = ({ s
     const pathname = usePathname()
     const searchParams = useSearchParams()
 
-    const kind = searchParams.get('kind') ?? ''
+    const kind = searchParams.get('kind') ?? 'daily'
     const lang = searchParams.get('lang') ?? 'ko'
 
     const setParam = (key: 'kind' | 'lang', value: string) => {
@@ -30,7 +30,7 @@ export const ReportFilter: FC<{ showKind?: boolean; showLang?: boolean }> = ({ s
                                 key={opt.value}
                                 className='rounded cursor-pointer shrink-0'
                                 variant={kind === opt.value ? 'default' : 'secondary'}
-                                onClick={() => setParam('kind', kind === opt.value ? '' : opt.value)}>
+                                onClick={() => setParam('kind', opt.value)}>
                                 {opt.label}
                             </Badge>
                         ))}

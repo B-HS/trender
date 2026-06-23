@@ -8,7 +8,7 @@ import { Suspense } from 'react'
 
 const Page = async ({ searchParams }: { searchParams: Promise<{ kind?: string; lang?: string }> }) => {
     const sp = await searchParams
-    const kind = sp.kind === 'daily' || sp.kind === 'weekly' ? (sp.kind as ReportKind) : undefined
+    const kind: ReportKind = sp.kind === 'weekly' ? 'weekly' : 'daily'
     const lang = sp.lang === 'ja' || sp.lang === 'en' ? (sp.lang as Lang) : 'ko'
     const reports = await listReportsCached('none', kind, lang)
 
