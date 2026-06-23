@@ -4,7 +4,7 @@ import { useLogin, useLogout, useMe } from '@entities/auth/auth.client'
 import { Button } from '@ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@ui/dialog'
 import { Input } from '@ui/input'
-import { Bookmark, LogOut } from 'lucide-react'
+import { Bookmark, LogIn, LogOut } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -45,8 +45,8 @@ export const AuthNav = () => {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant='outline' size='sm'>
-                    로그인
+                <Button variant='ghost' size='icon' aria-label='로그인'>
+                    <LogIn />
                 </Button>
             </DialogTrigger>
             <DialogContent>
