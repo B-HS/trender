@@ -1,6 +1,4 @@
-export const dynamic = 'force-dynamic'
-
-import { listReports } from '@entities/report/report.repo'
+import { listReportsCached } from '@entities/report/report.cache'
 import { ReportCard } from '@features/report/report-card'
 import { ReportFilter } from '@features/report/report-filter'
 import { CARD_GRID } from '@lib/constants'
@@ -12,7 +10,7 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ kind?: string; l
     const sp = await searchParams
     const kind = sp.kind === 'daily' || sp.kind === 'weekly' ? (sp.kind as ReportKind) : undefined
     const lang = sp.lang === 'ja' || sp.lang === 'en' ? (sp.lang as Lang) : 'ko'
-    const reports = await listReports({ vendor: 'none', kind, lang, limit: 60 })
+    const reports = await listReportsCached('none', kind, lang)
 
     return (
         <div className='flex flex-col gap-3 py-2'>

@@ -1,38 +1,45 @@
 'use client'
 
-import { useArticles } from '@entities/article/article.client'
+import { loadArticles } from '@entities/article/article.action'
+import type { ArticleListItem } from '@entities/article/article.repo'
 import { ArticleCard } from '@features/article/article-card'
 import { CARD_GRID } from '@lib/constants'
 import { Spinner } from '@ui/spinner'
-import { useSearchParams } from 'next/navigation'
-import { FC, useEffect, useRef } from 'react'
+import { FC, useEffect, useRef, useState } from 'react'
 
-export const ArticleList: FC<{ vendor: string; useLang?: boolean }> = ({ vendor, useLang = true }) => {
+type ArticleListProps = {
+    vendor: string
+    q: string
+    lang: string
+    initialItems: ArticleListItem[]
+    initialCursor: number | null
+}
+
+export const ArticleList: FC<ArticleListProps> = ({ vendor, q, lang, initialItems, initialCursor }) => {
     const sentinelRef = useRef<HTMLDivElement>(null)
-    const searchParams = useSearchParams()
-    const q = searchParams.get('q') ?? ''
-    const lang = useLang ? (searchParams.get('lang') ?? 'ko') : ''
-    const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useArticles({ vendor, q, lang })
+    const loadingRef = useRef(false)
+    const [items, setItems] = useState(initialItems)
+    const [cursor, setCursor] = useState(initialCursor)
+    const [isFetching, setIsFetching] = useState(false)
 
     useEffect(() => {
         const el = sentinelRef.current
-        if (!el) return
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage()
+        if (!el || cursor == null) return
+        const observer = new IntersectionObserver(async (entries) => {
+            if (!entries[0].isIntersecting || loadingRef.current || cursor == null) return
+            loadingRef.current = true
+            setIsFetching(true)
+            const page = await loadArticles({ vendor, q, lang, cursor })
+            setItems((prev) => [...prev, ...page.items])
+            setCursor(page.nextCursor)
+            setIsFetching(false)
+            loadingRef.current = false
         })
         observer.observe(el)
         return () => observer.disconnect()
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+    }, [vendor, q, lang, cursor])
 
-    if (isLoading)
-        return (
-            <div className='flex justify-center items-center min-h-40'>
-                <Spinner />
-            </div>
-        )
-
-    const items = data?.pages.flatMap((p) => p.items) ?? []
-    if (items.length === 0) return <p className='text-center text-muted-foreground py-16'>아직 수집된 기사가 없습니다.</p>
+    if (items.length === 0) return <p className='text-center text-muted-foreground py-16'>조건에 맞는 기사가 없습니다.</p>
 
     return (
         <section className={CARD_GRID}>
@@ -40,7 +47,7 @@ export const ArticleList: FC<{ vendor: string; useLang?: boolean }> = ({ vendor,
                 <ArticleCard key={article.id} article={article} />
             ))}
             <div ref={sentinelRef} className='col-span-full h-10 flex items-center justify-center'>
-                {isFetchingNextPage && <Spinner />}
+                {isFetching && <Spinner />}
             </div>
         </section>
     )

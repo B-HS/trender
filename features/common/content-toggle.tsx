@@ -9,10 +9,9 @@ type ContentToggleProps = {
     translatedTitle: string | null
     originalHtml: string
     translatedHtml: string
-    actions: React.ReactNode
 }
 
-export const ContentToggle: FC<ContentToggleProps> = ({ originalTitle, translatedTitle, originalHtml, translatedHtml, actions }) => {
+export const ContentToggle: FC<ContentToggleProps> = ({ originalTitle, translatedTitle, originalHtml, translatedHtml }) => {
     const [showTranslated, setShowTranslated] = useState(false)
     const hasTranslation = translatedHtml.length > 0 || !!translatedTitle
 
@@ -21,10 +20,7 @@ export const ContentToggle: FC<ContentToggleProps> = ({ originalTitle, translate
 
     return (
         <>
-            <div className='flex items-start justify-between gap-2'>
-                <h1 className='text-2xl font-extrabold tracking-tight'>{title}</h1>
-                {actions}
-            </div>
+            <h1 className='text-2xl font-extrabold tracking-tight'>{title}</h1>
             {hasTranslation && (
                 <div className='flex w-fit rounded-md border p-0.5 text-sm'>
                     <Button variant={showTranslated ? 'ghost' : 'secondary'} size='sm' className='h-7' onClick={() => setShowTranslated(false)}>

@@ -1,3 +1,5 @@
+export const revalidate = 1800
+
 import { listVendorReports } from '@entities/report/report.repo'
 import { ReportCard } from '@features/report/report-card'
 import { CARD_GRID } from '@lib/constants'

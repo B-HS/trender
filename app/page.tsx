@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic'
+export const revalidate = 1800
 
 import { getDailyVendorReports, getLatestDailyReports } from '@entities/report/report.repo'
 import { ReportCard } from '@features/report/report-card'

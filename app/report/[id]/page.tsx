@@ -1,3 +1,5 @@
+export const revalidate = 600
+
 import { getReport } from '@entities/report/report.repo'
 import { BookmarkButton } from '@features/common/bookmark-button'
 import { ContentView } from '@features/common/content-view'
