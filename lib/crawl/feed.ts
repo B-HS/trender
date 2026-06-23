@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser'
+import { decodeEntities } from '@lib/utils'
 
 export type FeedEntry = {
     title: string
@@ -39,7 +40,7 @@ export const parseFeed = (xml: string): FeedEntry[] => {
     if (root.rss) {
         const channel = root.rss.channel as Record<string, unknown>
         return arr(channel.item as Record<string, unknown>[]).map((it) => ({
-            title: txt(it.title),
+            title: decodeEntities(txt(it.title)),
             link: txt(it.link),
             published: txt(it.pubDate) || txt(it['dc:date']) || undefined,
             author: txt(it['dc:creator']) || txt(it.author) || undefined,
@@ -52,7 +53,7 @@ export const parseFeed = (xml: string): FeedEntry[] => {
 
     if (root.feed) {
         return arr(root.feed.entry as Record<string, unknown>[]).map((it) => ({
-            title: txt(it.title),
+            title: decodeEntities(txt(it.title)),
             link: atomLink(it.link),
             published: txt(it.published) || txt(it.updated) || undefined,
             author: txt((it.author as Record<string, unknown>)?.name ?? it.author) || undefined,
@@ -66,7 +67,7 @@ export const parseFeed = (xml: string): FeedEntry[] => {
     const rdf = root['rdf:RDF']
     if (rdf) {
         return arr(rdf.item as Record<string, unknown>[]).map((it) => ({
-            title: txt(it.title),
+            title: decodeEntities(txt(it.title)),
             link: txt(it.link),
             published: txt(it['dc:date']) || undefined,
             author: txt(it['dc:creator']) || undefined,

@@ -1,16 +1,26 @@
 export const revalidate = 600
 
-import { getReport } from '@entities/report/report.repo'
+import { getReport, getReportItems } from '@entities/report/report.repo'
 import { BookmarkButton } from '@features/common/bookmark-button'
 import { ContentView } from '@features/common/content-view'
 import { VENDOR_LABEL } from '@lib/constants'
 import { Badge } from '@ui/badge'
 import { notFound } from 'next/navigation'
 
+const linkCitations = (markdown: string, rankToId: Map<number, number>) =>
+    markdown.replace(/\[(\d+)\]/g, (match, n) => {
+        const articleId = rankToId.get(Number(n))
+        return articleId ? `[\\[${n}\\]](/article/${articleId})` : match
+    })
+
 const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params
     const report = await getReport(Number(id))
     if (!report) notFound()
+
+    const items = await getReportItems(report.id)
+    const rankToId = new Map(items.map((it) => [it.rank, it.articleId]))
+    const markdown = linkCitations(report.markdown, rankToId)
 
     return (
         <article className='flex flex-col gap-4 py-2 max-w-3xl mx-auto'>
@@ -29,7 +39,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                     <BookmarkButton targetType='report' targetId={report.id} className='mt-1 shrink-0' />
                 </div>
             </header>
-            <ContentView content={report.markdown} />
+            <ContentView content={markdown} />
         </article>
     )
 }

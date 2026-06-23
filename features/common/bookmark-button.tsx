@@ -5,6 +5,7 @@ import { useMe } from '@entities/auth/auth.client'
 import { cn } from '@lib/utils'
 import { Button } from '@ui/button'
 import { Bookmark } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { FC } from 'react'
 import { toast } from 'sonner'
 
@@ -14,14 +15,20 @@ type BookmarkButtonProps = {
     className?: string
 }
 
-export const BookmarkButton: FC<BookmarkButtonProps> = ({ targetType, targetId, className }) => {
+const BookmarkPlaceholder: FC<{ className?: string }> = ({ className }) => (
+    <span className={cn('inline-flex size-7 items-center justify-center', className)} aria-hidden>
+        <Bookmark className='size-4 text-muted-foreground/40' />
+    </span>
+)
+
+const BookmarkButtonInner: FC<BookmarkButtonProps> = ({ targetType, targetId, className }) => {
     const { data: me } = useMe()
     const { data: ids = [] } = useFavoriteIds(targetType)
     const toggle = useToggleFavorite(targetType)
 
-    const active = ids.includes(targetId)
+    if (!me?.user) return <BookmarkPlaceholder className={className} />
 
-    if (!me?.user) return null
+    const active = ids.includes(targetId)
 
     return (
         <Button
@@ -37,3 +44,8 @@ export const BookmarkButton: FC<BookmarkButtonProps> = ({ targetType, targetId, 
         </Button>
     )
 }
+
+export const BookmarkButton = dynamic(() => Promise.resolve(BookmarkButtonInner), {
+    ssr: false,
+    loading: () => <BookmarkPlaceholder />,
+})

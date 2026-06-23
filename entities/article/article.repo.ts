@@ -35,21 +35,30 @@ export const listArticles = async ({
     limit = 20,
     q,
     lang,
+    sourceIds,
+    period,
 }: {
     vendor: Vendor | 'none' | 'any'
     cursor?: number
     limit?: number
     q?: string
     lang?: Lang
+    sourceIds?: number[]
+    period?: 'today' | '3d' | '7d'
 }) => {
     const vendorWhere = vendor === 'any' ? undefined : vendor === 'none' ? isNull(sources.vendor) : eq(sources.vendor, vendor)
     const cursorWhere = cursor ? lt(articles.id, cursor) : undefined
     const langWhere = lang ? eq(articles.lang, lang) : undefined
+    const sourceWhere = sourceIds && sourceIds.length > 0 ? inArray(articles.sourceId, sourceIds) : undefined
+    const periodDays = period === 'today' ? 1 : period === '3d' ? 3 : period === '7d' ? 7 : undefined
+    const periodWhere = periodDays
+        ? sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt}) >= (now() - interval ${sql.raw(String(periodDays))} day)`
+        : undefined
     const keyword = q?.trim()
     const searchWhere = keyword
         ? sql`(${articles.titleOriginal} like ${`%${keyword}%`} or ${articles.titleTranslatedKo} like ${`%${keyword}%`})`
         : undefined
-    const where = and(...[vendorWhere, cursorWhere, langWhere, searchWhere].filter(Boolean))
+    const where = and(...[vendorWhere, cursorWhere, langWhere, sourceWhere, periodWhere, searchWhere].filter(Boolean))
 
     const rows = await db
         .select({
@@ -67,6 +76,18 @@ export const listArticles = async ({
         .limit(limit)
 
     return withKeywords(rows)
+}
+
+export const listSourceOptions = async (vendor: Vendor | 'none' | 'any', lang?: Lang) => {
+    const vendorWhere = vendor === 'any' ? undefined : vendor === 'none' ? isNull(sources.vendor) : eq(sources.vendor, vendor)
+    const langWhere = lang ? eq(articles.lang, lang) : undefined
+    const rows = await db
+        .selectDistinct({ id: sources.id, value: sources.value })
+        .from(sources)
+        .innerJoin(articles, eq(articles.sourceId, sources.id))
+        .where(and(...[vendorWhere, langWhere].filter(Boolean)))
+        .orderBy(sources.value)
+    return rows
 }
 
 export const getArticle = async (id: number) => {

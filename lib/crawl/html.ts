@@ -16,6 +16,20 @@ export const extractBySelector = async (url: string, selectors: string[]) => {
     return best ? (best as { html: string }).html : null
 }
 
+export const extractNuxtBody = (html: string) => {
+    const match = /<script[^>]*id="__NUXT_DATA__"[^>]*>([\s\S]*?)<\/script>/.exec(html)
+    if (!match) return null
+    try {
+        const payload = JSON.parse(match[1]) as unknown[]
+        const htmlish = (payload.filter((x) => typeof x === 'string') as string[])
+            .filter((s) => /<\/?(p|h2|h3|figure|pre|ul|img)\b/i.test(s))
+            .sort((a, b) => b.length - a.length)
+        return htmlish[0] ?? null
+    } catch {
+        return null
+    }
+}
+
 export const htmlToText = (html: string) => {
     const $ = cheerio.load(html)
     $('script, style').remove()

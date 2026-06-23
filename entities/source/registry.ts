@@ -1,13 +1,8 @@
 import type { Provider } from './provider.type'
-import {
-    createAggregatorProvider,
-    createArticleProvider,
-    createFeedFullProvider,
-    createMdProvider,
-    createThinFeedProvider,
-} from '@lib/crawl/factories'
+import { createAggregatorProvider, createArticleProvider, createFeedFullProvider, createMdProvider } from '@lib/crawl/factories'
 import { createZennProvider } from './providers/zenn'
 import { createQiitaProvider } from './providers/qiita'
+import { createKakaoProvider } from './providers/kakaotech'
 
 export const PROVIDERS: Provider[] = [
     createZennProvider('ai'),
@@ -31,14 +26,14 @@ export const PROVIDERS: Provider[] = [
     }),
     createFeedFullProvider({ id: 'yozm', name: '요즘IT', lang: 'ko', feedUrl: 'https://yozm.wishket.com/magazine/feed/' }),
     createFeedFullProvider({ id: 'naver-d2', name: 'Naver D2', lang: 'ko', feedUrl: 'https://d2.naver.com/d2.atom', vendor: 'naver' }),
-    createThinFeedProvider({ id: 'kakaotech', name: 'KakaoTech', lang: 'ko', feedUrl: 'https://tech.kakao.com/feed', vendor: 'kakao' }),
+    createKakaoProvider(),
 
     createArticleProvider({
         id: 'itmedia',
         name: 'ITmedia AI+',
         lang: 'ja',
         feedUrl: 'https://rss.itmedia.co.jp/rss/2.0/aiplus.xml',
-        selectors: ['.l-block__main', '#ArticleText'],
+        selectors: ['#cmsBody', '.l-block__main', '#ArticleText', '.inner'],
     }),
     createArticleProvider({
         id: 'publickey',

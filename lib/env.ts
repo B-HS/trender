@@ -3,7 +3,7 @@ import { z } from 'zod'
 const envSchema = z.object({
     DATABASE_URL: z.string().min(1),
     CODEX_AUTH: z.string().min(1).optional(),
-    TRANSLATE_MODEL: z.string().min(1).default('gpt-5.5'),
+    TRANSLATE_MODEL: z.string().min(1).default('gpt-5.4-mini'),
     KEYWORD_MODEL: z.string().min(1).default('gpt-5.4-mini'),
 })
 

@@ -1,44 +1,41 @@
 'use client'
 
-import { loadArticles } from '@entities/article/article.action'
-import type { ArticleListItem } from '@entities/article/article.repo'
+import { useArticles } from '@entities/article/article.client'
 import { ArticleCard } from '@features/article/article-card'
 import { CARD_GRID } from '@lib/constants'
 import { Spinner } from '@ui/spinner'
-import { FC, useEffect, useRef, useState } from 'react'
+import { FC, useEffect, useRef } from 'react'
 
 type ArticleListProps = {
     vendor: string
     q: string
     lang: string
-    initialItems: ArticleListItem[]
-    initialCursor: number | null
+    source: string
+    period: string
 }
 
-export const ArticleList: FC<ArticleListProps> = ({ vendor, q, lang, initialItems, initialCursor }) => {
+export const ArticleList: FC<ArticleListProps> = ({ vendor, q, lang, source, period }) => {
     const sentinelRef = useRef<HTMLDivElement>(null)
-    const loadingRef = useRef(false)
-    const [items, setItems] = useState(initialItems)
-    const [cursor, setCursor] = useState(initialCursor)
-    const [isFetching, setIsFetching] = useState(false)
+    const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useArticles({ vendor, q, lang, source, period })
 
     useEffect(() => {
         const el = sentinelRef.current
-        if (!el || cursor == null) return
-        const observer = new IntersectionObserver(async (entries) => {
-            if (!entries[0].isIntersecting || loadingRef.current || cursor == null) return
-            loadingRef.current = true
-            setIsFetching(true)
-            const page = await loadArticles({ vendor, q, lang, cursor })
-            setItems((prev) => [...prev, ...page.items])
-            setCursor(page.nextCursor)
-            setIsFetching(false)
-            loadingRef.current = false
+        if (!el) return
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage()
         })
         observer.observe(el)
         return () => observer.disconnect()
-    }, [vendor, q, lang, cursor])
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
+    if (isLoading)
+        return (
+            <div className='flex justify-center items-center min-h-40'>
+                <Spinner />
+            </div>
+        )
+
+    const items = data?.pages.flatMap((p) => p.items) ?? []
     if (items.length === 0) return <p className='text-center text-muted-foreground py-16'>조건에 맞는 기사가 없습니다.</p>
 
     return (
@@ -47,7 +44,7 @@ export const ArticleList: FC<ArticleListProps> = ({ vendor, q, lang, initialItem
                 <ArticleCard key={article.id} article={article} />
             ))}
             <div ref={sentinelRef} className='col-span-full h-10 flex items-center justify-center'>
-                {isFetching && <Spinner />}
+                {isFetchingNextPage && <Spinner />}
             </div>
         </section>
     )

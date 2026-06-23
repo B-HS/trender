@@ -15,7 +15,12 @@ export const metadata: Metadata = {
         template: '%s | Trender',
     },
     description: 'AI 트렌드 — 기사 · 리포트 · 기업 소식',
-    robots: { index: true, follow: true },
+    robots: {
+        index: false,
+        follow: false,
+        nocache: true,
+        googleBot: { index: false, follow: false, noimageindex: true },
+    },
 }
 
 const Layout: FC<PropsWithChildren> = ({ children }) => {

@@ -8,7 +8,7 @@ import { FC } from 'react'
 
 export const ReportCard: FC<{ report: ReportListItem }> = ({ report }) => {
     return (
-        <article className='p-3 rounded shadow-sm hover:shadow-md transition-all duration-150 flex flex-col gap-1.5 border hover:bg-border/50'>
+        <article className='min-w-0 p-3 rounded shadow-sm hover:shadow-md transition-all duration-150 flex flex-col gap-1.5 border hover:bg-border/50'>
             <header className='flex items-center justify-between gap-2'>
                 <div className='flex items-center gap-1.5'>
                     <Badge variant='secondary' className='rounded-xs h-fit px-1'>
@@ -21,7 +21,7 @@ export const ReportCard: FC<{ report: ReportListItem }> = ({ report }) => {
                     <BookmarkButton targetType='report' targetId={report.id} />
                 </div>
             </header>
-            <Link href={`/report/${report.id}`} prefetch={false} className='text-sm font-bold line-clamp-2 hover:underline'>
+            <Link href={`/report/${report.id}`} prefetch={false} className='text-sm font-bold line-clamp-2 hover:underline break-words'>
                 {report.title}
             </Link>
             {report.kind === 'weekly' && (

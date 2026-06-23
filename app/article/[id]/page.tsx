@@ -3,7 +3,7 @@ import { BookmarkButton } from '@features/common/bookmark-button'
 import { ContentToggle } from '@features/common/content-toggle'
 import { VENDOR_LABEL } from '@lib/constants'
 import { renderContent } from '@lib/render/content'
-import { getHostname } from '@lib/utils'
+import { decodeEntities, getHostname } from '@lib/utils'
 import { Badge } from '@ui/badge'
 import { buttonVariants } from '@ui/button'
 import dayjs from 'dayjs'
@@ -49,8 +49,8 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 </div>
             </header>
             <ContentToggle
-                originalTitle={article.titleOriginal}
-                translatedTitle={article.titleTranslatedKo}
+                originalTitle={decodeEntities(article.titleOriginal)}
+                translatedTitle={article.titleTranslatedKo ? decodeEntities(article.titleTranslatedKo) : null}
                 originalHtml={originalHtml}
                 translatedHtml={translatedHtml}
             />

@@ -19,9 +19,9 @@ const LANG_CONFIG: Record<Lang, { language: string; daily: string; weekly: strin
 }
 
 const instruction = (language: string) =>
-    `You write AI/tech trend reports. From the given article list (title + link), write a Markdown report in ${language}. ` +
-    `Group the key trends into 2-4 topics, summarize each, and link related articles as [title](link). ` +
-    `Output only the report body in Markdown (no top-level # heading).`
+    `You write AI/tech trend reports. You are given a numbered list of articles. Write a Markdown report in ${language}. ` +
+    `Group the key trends into 2-4 topics and summarize each. When you mention an article, cite it using its number in bracket form like [1] or [3]. ` +
+    `Do NOT write markdown links; only use the [number] citation form. Output only the report body in Markdown (no top-level # heading).`
 
 const toMysql = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ')
 const toDate = (d: Date) => d.toISOString().slice(0, 10)
@@ -34,7 +34,7 @@ export const generateReport = async (kind: ReportKind, vendor: Vendor | null, la
     const articles = await getArticlesForPeriod({ vendor: vendorKey, since: toMysql(since), limit: 30 })
     if (articles.length === 0) return null
 
-    const list = articles.map((a) => `- [${a.title}](${a.url})`).join('\n')
+    const list = articles.map((a, i) => `${i + 1}. ${a.title}`).join('\n')
     const config = LANG_CONFIG[lang]
     const markdown = await callCodex({
         model: getEnv().TRANSLATE_MODEL,

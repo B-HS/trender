@@ -1,7 +1,18 @@
 'use client'
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { loadArticles } from '@entities/article/article.action'
 import { QUERY_KEY } from '@lib/constants'
+
+type ArticleQueryArgs = { vendor: string; q: string; lang: string; source: string; period: string }
+
+export const useArticles = ({ vendor, q, lang, source, period }: ArticleQueryArgs) =>
+    useInfiniteQuery({
+        queryKey: QUERY_KEY.ARTICLE.LIST(vendor, q, lang, source, period),
+        initialPageParam: 0,
+        queryFn: ({ pageParam }) => loadArticles({ vendor, q, lang, source, period, cursor: pageParam as number }),
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+    })
 
 export const useFavoriteIds = (targetType: 'article' | 'report') =>
     useQuery<number[]>({

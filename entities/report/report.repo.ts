@@ -46,6 +46,15 @@ export const listReports = async ({
         .limit(limit)
 }
 
+export const getReportItems = async (reportId: number) => {
+    const rows = await db
+        .select({ rank: reportItems.rank, articleId: reportItems.articleId })
+        .from(reportItems)
+        .where(eq(reportItems.reportId, reportId))
+        .orderBy(reportItems.rank)
+    return rows
+}
+
 export const getReport = async (id: number) => {
     const [row] = await db
         .select({
