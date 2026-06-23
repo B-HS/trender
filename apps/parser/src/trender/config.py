@@ -42,10 +42,12 @@ class Settings(BaseSettings):
     openrouter_referer: str | None = Field(default=None, alias="OPENROUTER_REFERER")
     openrouter_app_title: str | None = Field(default="trender", alias="OPENROUTER_APP_TITLE")
 
-    # OpenAI OAuth (Codex CLI 로그인 토큰 사용)
-    openai_oauth_model: str = Field(default="gpt-4o-mini", alias="OPENAI_OAUTH_MODEL")
-    openai_oauth_model_light: str | None = Field(default=None, alias="OPENAI_OAUTH_MODEL_LIGHT")
-    openai_oauth_base_url: str = Field(default="https://api.openai.com/v1", alias="OPENAI_OAUTH_BASE_URL")
+    # OpenAI OAuth (Codex CLI 로그인 토큰 — ChatGPT 백엔드 Responses API)
+    openai_oauth_model: str = Field(default="gpt-5.5", alias="OPENAI_OAUTH_MODEL")
+    openai_oauth_model_light: str | None = Field(default="gpt-5.4-mini", alias="OPENAI_OAUTH_MODEL_LIGHT")
+    openai_oauth_base_url: str = Field(default="https://chatgpt.com/backend-api/codex", alias="OPENAI_OAUTH_BASE_URL")
+    openai_oauth_reasoning_effort: str = Field(default="low", alias="OPENAI_OAUTH_REASONING_EFFORT")
+    openai_oauth_timeout_seconds: int = Field(default=180, alias="OPENAI_OAUTH_TIMEOUT_SECONDS")
     openai_oauth_token: str | None = Field(default=None, alias="OPENAI_OAUTH_TOKEN")
     openai_oauth_auth_file: str | None = Field(default=None, alias="OPENAI_OAUTH_AUTH_FILE")
 

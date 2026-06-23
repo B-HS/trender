@@ -90,17 +90,15 @@ def _build_openrouter(s: Settings, role: ChainRole) -> LLMClient | None:
 
 def _build_openai_oauth(s: Settings, role: ChainRole) -> LLMClient | None:
     auth_file = Path(s.openai_oauth_auth_file).expanduser() if s.openai_oauth_auth_file else None
-    has_explicit = bool(s.openai_oauth_token)
-    has_auth_file = (auth_file or (Path.home() / ".codex" / "auth.json")).exists() if auth_file else (
-        Path.home() / ".codex" / "auth.json"
-    ).exists()
-    if not has_explicit and not has_auth_file:
+    if not s.openai_oauth_token and not (auth_file or Path.home() / ".codex" / "auth.json").exists():
         return None
     return OpenAIOAuthClient(
         model=_pick_model(role, s.openai_oauth_model_light, s.openai_oauth_model),
         base_url=s.openai_oauth_base_url,
+        reasoning_effort=s.openai_oauth_reasoning_effort,
         explicit_token=s.openai_oauth_token,
         auth_file=auth_file,
+        timeout=s.openai_oauth_timeout_seconds,
     )
 
 

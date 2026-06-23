@@ -17,8 +17,8 @@ services:
     volumes:
       - parser-logs:/var/log
       - cloak-cache:/var/cache/cloakbrowser
-      # codex auth 토큰을 컨테이너로 마운트하려면 주석 해제
-      # - ${HOME}/.codex/auth.json:/var/secrets/codex-auth.json:ro
+      # codex auth 토큰 마운트. refresh(회전 토큰) write-back 위해 rw 필요 — 호스트에 `codex login` 선행.
+      - ${HOME}/.codex/auth.json:/var/secrets/codex-auth.json:rw
     extra_hosts:
       - "host.docker.internal:host-gateway"
     shm_size: 1g
