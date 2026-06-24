@@ -1,4 +1,11 @@
-import { getExistingUrls, getPendingEnrichment, insertArticle, markEnrichmentFailed, saveEnrichment } from '@entities/article/article.repo'
+import {
+    getArticleForEnrichment,
+    getExistingUrls,
+    insertArticle,
+    listPendingArticleIds,
+    markEnrichmentFailed,
+    saveEnrichment,
+} from '@entities/article/article.repo'
 import { getProvider } from '@entities/source/registry'
 import { ensureSource } from '@entities/source/source.repo'
 import { extractKeywords } from '@lib/ai/keywords'
@@ -24,24 +31,20 @@ export const crawlProviderOnce = async (providerId: string) => {
     return inserted
 }
 
-export const enrichPendingBatch = async (limit: number) => {
-    const pending = await getPendingEnrichment(limit)
-    let processed = 0
-    for (const article of pending) {
-        try {
-            const [keywords, translated] = await Promise.all([
-                extractKeywords(article.titleOriginal, article.contentOriginal),
-                translateToKo(article.titleOriginal, article.contentOriginal),
-            ])
-            await saveEnrichment(article.id, {
-                keywords,
-                titleTranslatedKo: translated.titleTranslated,
-                contentTranslatedKo: translated.bodyTranslated,
-            })
-        } catch {
-            await markEnrichmentFailed(article.id)
-        }
-        processed += 1
+export const getPendingArticleIds = (limit: number) => listPendingArticleIds(limit)
+
+export const enrichArticle = async (articleId: number) => {
+    const article = await getArticleForEnrichment(articleId)
+    if (!article) return false
+    try {
+        const [keywords, translated] = await Promise.all([
+            extractKeywords(article.titleOriginal, article.contentOriginal),
+            translateToKo(article.titleOriginal, article.contentOriginal),
+        ])
+        await saveEnrichment(articleId, { keywords, titleTranslatedKo: translated.titleTranslated, contentTranslatedKo: translated.bodyTranslated })
+        return true
+    } catch {
+        await markEnrichmentFailed(articleId)
+        return false
     }
-    return processed
 }

@@ -131,13 +131,24 @@ export const insertArticle = async (sourceId: number, item: CrawledItem) => {
     return res.insertId
 }
 
-export const getPendingEnrichment = async (limit: number) =>
-    db
-        .select({ id: articles.id, titleOriginal: articles.titleOriginal, contentOriginal: articles.contentOriginal })
+export const listPendingArticleIds = async (limit: number) => {
+    const rows = await db
+        .select({ id: articles.id })
         .from(articles)
         .where(isNull(articles.keywordsExtractedAt))
         .orderBy(desc(articles.id))
         .limit(limit)
+    return rows.map((r) => r.id)
+}
+
+export const getArticleForEnrichment = async (id: number) => {
+    const [row] = await db
+        .select({ id: articles.id, titleOriginal: articles.titleOriginal, contentOriginal: articles.contentOriginal })
+        .from(articles)
+        .where(eq(articles.id, id))
+        .limit(1)
+    return row ?? null
+}
 
 export const saveEnrichment = async (articleId: number, data: { keywords: string[]; titleTranslatedKo: string; contentTranslatedKo: string }) => {
     await db
