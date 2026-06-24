@@ -173,6 +173,15 @@ export const favorites = mysqlTable(
     ],
 )
 
+export const appLocks = mysqlTable(
+    'app_locks',
+    {
+        name: varchar({ length: 64 }).notNull(),
+        lockedUntil: datetime('locked_until', { mode: 'string' }),
+    },
+    (table) => [primaryKey({ columns: [table.name], name: 'app_locks_name' })],
+)
+
 export const sourceStats = mysqlTable(
     'source_stats',
     {
