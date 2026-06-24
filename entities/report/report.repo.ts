@@ -92,10 +92,18 @@ export const insertReport = async (
     data: { kind: ReportKind; lang: Lang; vendor: Vendor | null; periodStart: string; periodEnd: string; title: string; markdown: string },
     articleIds: number[],
 ) => {
-    const [res] = await db
-        .insert(reports)
-        .values({ ...data, vendor: data.vendor ?? undefined })
-        .onDuplicateKeyUpdate({ set: { title: data.title, markdown: data.markdown, createdAt: sql`(now())` } })
+    await db
+        .delete(reports)
+        .where(
+            and(
+                eq(reports.kind, data.kind),
+                eq(reports.lang, data.lang),
+                eq(reports.periodStart, data.periodStart),
+                eq(reports.periodEnd, data.periodEnd),
+                data.vendor ? eq(reports.vendor, data.vendor) : isNull(reports.vendor),
+            ),
+        )
+    const [res] = await db.insert(reports).values({ ...data, vendor: data.vendor ?? undefined })
     const reportId = Number(res.insertId)
     if (reportId > 0 && articleIds.length > 0) {
         await db.insert(reportItems).values(articleIds.map((articleId, idx) => ({ reportId, articleId, rank: idx + 1 })))

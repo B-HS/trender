@@ -103,7 +103,7 @@ export const reports = mysqlTable(
         index('idx_lang_kind').on(table.lang, table.kind),
         index('idx_vendor_kind').on(table.vendor, table.kind),
         primaryKey({ columns: [table.id], name: 'reports_id' }),
-        unique('uniq_kind_period_lang').on(table.kind, table.periodStart, table.periodEnd, table.lang),
+        unique('uniq_kind_period_lang_vendor').on(table.kind, table.periodStart, table.periodEnd, table.lang, table.vendor),
     ],
 )
 

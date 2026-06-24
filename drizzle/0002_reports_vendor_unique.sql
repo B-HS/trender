@@ -1,0 +1,2 @@
+ALTER TABLE `reports` DROP INDEX `uniq_kind_period_lang`;--> statement-breakpoint
+ALTER TABLE `reports` ADD CONSTRAINT `uniq_kind_period_lang_vendor` UNIQUE(`kind`,`period_start`,`period_end`,`lang`,`vendor`);

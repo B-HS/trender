@@ -15,6 +15,13 @@
       "when": 1782193274792,
       "tag": "0001_add_vendor_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1782259442063,
+      "tag": "0002_reports_vendor_unique",
+      "breakpoints": true
     }
   ]
 }
