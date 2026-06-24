@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm'
 import { db } from '@entities/db/client'
 import { articles, keywordsExtracted, sources } from '@entities/db/schema'
 import type { CrawledItem, Lang, Vendor } from '@entities/source/provider.type'
@@ -131,11 +131,13 @@ export const insertArticle = async (sourceId: number, item: CrawledItem) => {
     return res.insertId
 }
 
+const ENRICH_MIN_PUBLISHED = '2026-01-01'
+
 export const listPendingArticleIds = async (limit: number) => {
     const rows = await db
         .select({ id: articles.id })
         .from(articles)
-        .where(isNull(articles.keywordsExtractedAt))
+        .where(and(isNull(articles.keywordsExtractedAt), gte(sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt})`, ENRICH_MIN_PUBLISHED)))
         .orderBy(desc(articles.id))
         .limit(limit)
     return rows.map((r) => r.id)
