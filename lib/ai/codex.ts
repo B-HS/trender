@@ -65,17 +65,36 @@ const request = async (token: string, body: string) =>
         body,
     })
 
-export const callCodex = async ({ model, instructions, input }: { model: string; instructions: string; input: CodexInput[] }) => {
+export const callCodex = async ({
+    model,
+    instructions,
+    input,
+    effort = 'low',
+}: {
+    model: string
+    instructions: string
+    input: CodexInput[]
+    effort?: 'low' | 'medium' | 'high'
+}) => {
     const body = JSON.stringify({
         model,
         instructions,
         input: input.map((i) => ({ role: i.role, content: [{ type: i.role === 'assistant' ? 'output_text' : 'input_text', text: i.text }] })),
+        reasoning: { effort },
         stream: true,
         store: false,
     })
 
     let res = await request(cachedToken ?? getAuth().tokens.access_token, body)
     if (res.status === 401) res = await request(await refreshAccessToken(), body)
-    if (!res.ok) throw new Error(`codex ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    if (!res.ok) {
+        const text = (await res.text()).slice(0, 300)
+        if (res.status === 429 || /rate.?limit|usage limit|quota|too many requests|insufficient_quota/i.test(text)) {
+            throw new Error(`CODEX_LIMIT: ${res.status} ${text}`)
+        }
+        throw new Error(`codex ${res.status}: ${text}`)
+    }
     return parseSse(await res.text())
 }
+
+export const isCodexLimit = (error: unknown) => error instanceof Error && error.message.startsWith('CODEX_LIMIT')

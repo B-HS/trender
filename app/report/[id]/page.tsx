@@ -3,15 +3,10 @@ export const revalidate = 600
 import { getReport, getReportItems } from '@entities/report/report.repo'
 import { BookmarkButton } from '@features/common/bookmark-button'
 import { ContentView } from '@features/common/content-view'
+import { linkifyCitations } from '@lib/citations'
 import { VENDOR_LABEL } from '@lib/constants'
 import { Badge } from '@ui/badge'
 import { notFound } from 'next/navigation'
-
-const linkCitations = (markdown: string, rankToId: Map<number, number>) =>
-    markdown.replace(/\[(\d+)\]/g, (match, n) => {
-        const articleId = rankToId.get(Number(n))
-        return articleId ? `[\\[${n}\\]](/article/${articleId})` : match
-    })
 
 const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params
@@ -20,7 +15,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
     const items = await getReportItems(report.id)
     const rankToId = new Map(items.map((it) => [it.rank, it.articleId]))
-    const markdown = linkCitations(report.markdown, rankToId)
+    const markdown = linkifyCitations(report.markdown, rankToId)
 
     return (
         <article className='flex flex-col gap-4 py-2 max-w-3xl mx-auto'>

@@ -8,7 +8,8 @@ const crawlOne = async (providerId: string) => {
     const { crawlProviderOnce } = await import('@lib/crawl/pipeline')
     try {
         return await crawlProviderOnce(providerId)
-    } catch {
+    } catch (error) {
+        console.error(`crawl failed: ${providerId}`, error instanceof Error ? error.message : error)
         return 0
     }
 }
@@ -39,10 +40,15 @@ export const crawlWorkflow = async () => {
 
     const pendingIds = await getPendingIds(ENRICH_PER_RUN)
     let enriched = 0
+    let limited = false
     for (const batch of chunk(pendingIds, ENRICH_CONCURRENCY)) {
         const results = await Promise.all(batch.map((id) => enrichOne(id)))
-        enriched += results.filter(Boolean).length
+        enriched += results.filter((r) => r === 'ok').length
+        if (results.includes('limited')) {
+            limited = true
+            break
+        }
     }
 
-    return { crawled, enriched }
+    return { crawled, enriched, limited }
 }

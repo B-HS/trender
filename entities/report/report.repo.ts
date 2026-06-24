@@ -46,6 +46,23 @@ export const listReports = async ({
         .limit(limit)
 }
 
+export const reportExists = async (data: { kind: ReportKind; lang: Lang; vendor: Vendor | null; periodStart: string; periodEnd: string }) => {
+    const [row] = await db
+        .select({ id: reports.id })
+        .from(reports)
+        .where(
+            and(
+                eq(reports.kind, data.kind),
+                eq(reports.lang, data.lang),
+                eq(reports.periodStart, data.periodStart),
+                eq(reports.periodEnd, data.periodEnd),
+                data.vendor ? eq(reports.vendor, data.vendor) : isNull(reports.vendor),
+            ),
+        )
+        .limit(1)
+    return !!row
+}
+
 export const getReportItems = async (reportId: number) => {
     const rows = await db
         .select({ rank: reportItems.rank, articleId: reportItems.articleId })

@@ -143,19 +143,19 @@ export const listPendingArticleIds = async (limit: number) => {
 
 export const getArticleForEnrichment = async (id: number) => {
     const [row] = await db
-        .select({ id: articles.id, titleOriginal: articles.titleOriginal, contentOriginal: articles.contentOriginal })
+        .select({ id: articles.id, lang: articles.lang, titleOriginal: articles.titleOriginal, contentOriginal: articles.contentOriginal })
         .from(articles)
         .where(eq(articles.id, id))
         .limit(1)
     return row ?? null
 }
 
-export const saveEnrichment = async (articleId: number, data: { keywords: string[]; titleTranslatedKo: string; contentTranslatedKo: string }) => {
+export const saveEnrichment = async (articleId: number, data: { keywords: string[]; titleTranslatedKo?: string; contentTranslatedKo?: string }) => {
     await db
         .update(articles)
         .set({
-            titleTranslatedKo: data.titleTranslatedKo.slice(0, 512),
-            contentTranslatedKo: data.contentTranslatedKo,
+            titleTranslatedKo: data.titleTranslatedKo ? data.titleTranslatedKo.slice(0, 512) : null,
+            contentTranslatedKo: data.contentTranslatedKo ?? null,
             translatedAt: sql`(now())`,
             keywordsExtractedAt: sql`(now())`,
         })

@@ -8,8 +8,9 @@ import {
 } from '@entities/article/article.repo'
 import { getProvider } from '@entities/source/registry'
 import { ensureSource } from '@entities/source/source.repo'
+import { isCodexLimit } from '@lib/ai/codex'
+import { extractAndTranslate } from '@lib/ai/enrich'
 import { extractKeywords } from '@lib/ai/keywords'
-import { translateToKo } from '@lib/ai/translate'
 import { runProvider } from './runner'
 
 const PER_PROVIDER_LIMIT = 15
@@ -35,16 +36,19 @@ export const getPendingArticleIds = (limit: number) => listPendingArticleIds(lim
 
 export const enrichArticle = async (articleId: number) => {
     const article = await getArticleForEnrichment(articleId)
-    if (!article) return false
+    if (!article) return 'failed'
     try {
-        const [keywords, translated] = await Promise.all([
-            extractKeywords(article.titleOriginal, article.contentOriginal),
-            translateToKo(article.titleOriginal, article.contentOriginal),
-        ])
-        await saveEnrichment(articleId, { keywords, titleTranslatedKo: translated.titleTranslated, contentTranslatedKo: translated.bodyTranslated })
-        return true
-    } catch {
+        if (article.lang === 'ko') {
+            const keywords = await extractKeywords(article.titleOriginal, article.contentOriginal)
+            await saveEnrichment(articleId, { keywords })
+        } else {
+            const { keywords, titleKo, bodyKo } = await extractAndTranslate(article.titleOriginal, article.contentOriginal)
+            await saveEnrichment(articleId, { keywords, titleTranslatedKo: titleKo, contentTranslatedKo: bodyKo })
+        }
+        return 'ok'
+    } catch (error) {
+        if (isCodexLimit(error)) return 'limited'
         await markEnrichmentFailed(articleId)
-        return false
+        return 'failed'
     }
 }

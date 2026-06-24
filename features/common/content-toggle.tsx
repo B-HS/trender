@@ -1,8 +1,9 @@
 'use client'
 
+import { useTranslationPreference } from '@lib/use-translation-preference'
 import { cn } from '@lib/utils'
 import { Button } from '@ui/button'
-import { FC, useState } from 'react'
+import { FC } from 'react'
 
 type ContentToggleProps = {
     originalTitle: string
@@ -12,7 +13,7 @@ type ContentToggleProps = {
 }
 
 export const ContentToggle: FC<ContentToggleProps> = ({ originalTitle, translatedTitle, originalHtml, translatedHtml }) => {
-    const [showTranslated, setShowTranslated] = useState(false)
+    const [showTranslated, setShowTranslated] = useTranslationPreference()
     const hasTranslation = translatedHtml.length > 0 || !!translatedTitle
 
     const title = showTranslated && translatedTitle ? translatedTitle : originalTitle

@@ -1,4 +1,4 @@
-import { getArticlesForPeriod, insertReport, type ReportKind } from '@entities/report/report.repo'
+import { getArticlesForPeriod, insertReport, reportExists, type ReportKind } from '@entities/report/report.repo'
 import type { Lang, Vendor } from '@entities/source/provider.type'
 import { getEnv } from '@lib/env'
 import { callCodex } from './codex'
@@ -19,17 +19,24 @@ const LANG_CONFIG: Record<Lang, { language: string; daily: string; weekly: strin
 }
 
 const instruction = (language: string) =>
-    `You write AI/tech trend reports. You are given a numbered list of articles. Write a Markdown report in ${language}. ` +
-    `Group the key trends into 2-4 topics and summarize each. When you mention an article, cite it using its number in bracket form like [1] or [3]. ` +
-    `Do NOT write markdown links; only use the [number] citation form. Output only the report body in Markdown (no top-level # heading).`
+    `You are an analyst writing an in-depth AI/tech trend report. Your entire response MUST be written in natural, fluent ${language}; ` +
+    `translate non-${language} concepts but keep proper nouns (product, company, code identifiers) in their original form.\n` +
+    'You are given a numbered list of articles. Group the key trends into 2-4 topics and summarize each in depth.\n' +
+    '\n' +
+    'Output format: GitHub Flavored Markdown only.\n' +
+    '- Use ##, ### for headings (not bold), - for bullets, **bold**, inline `code`, > blockquotes, | tables where useful.\n' +
+    '- Do NOT add a top-level # title, HTML tags, or wrap the whole response in a code block.\n' +
+    '- When you mention an article, cite it using its number as [#1], [#3] (bracket-hash-number). Do NOT use markdown links for citations; only the [#n] form.'
 
 const toMysql = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ')
 const toDate = (d: Date) => d.toISOString().slice(0, 10)
 
-export const generateReport = async (kind: ReportKind, vendor: Vendor | null, lang: Lang = 'ko', now = new Date()) => {
+export const generateReport = async (kind: ReportKind, vendor: Vendor | null, lang: Lang = 'ko', now = new Date(), skipIfExists = true) => {
     const spanMs = kind === 'daily' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000
     const since = new Date(now.getTime() - spanMs)
     const vendorKey = vendor ?? 'none'
+
+    if (skipIfExists && (await reportExists({ kind, lang, vendor, periodStart: toDate(since), periodEnd: toDate(now) }))) return null
 
     const articles = await getArticlesForPeriod({ vendor: vendorKey, since: toMysql(since), limit: 30 })
     if (articles.length === 0) return null
