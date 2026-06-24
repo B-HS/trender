@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
 import { db } from '@entities/db/client'
 import { articles, keywordsExtracted, sources } from '@entities/db/schema'
 import type { CrawledItem, Lang, Vendor } from '@entities/source/provider.type'
@@ -10,6 +10,7 @@ export type ArticleListItem = {
     sourceName: string
     vendor: Vendor | null
     publishedAt: string | null
+    sortAt: string
     keywords: string[]
 }
 
@@ -39,7 +40,7 @@ export const listArticles = async ({
     period,
 }: {
     vendor: Vendor | 'none' | 'any'
-    cursor?: number
+    cursor?: string
     limit?: number
     q?: string
     lang?: Lang
@@ -47,7 +48,10 @@ export const listArticles = async ({
     period?: 'today' | '3d' | '7d'
 }) => {
     const vendorWhere = vendor === 'any' ? undefined : vendor === 'none' ? isNull(sources.vendor) : eq(sources.vendor, vendor)
-    const cursorWhere = cursor ? lt(articles.id, cursor) : undefined
+    const [cursorAt, cursorId] = cursor ? cursor.split('|') : []
+    const cursorWhere = cursor
+        ? sql`(coalesce(${articles.publishedAt}, ${articles.fetchedAt}) < ${cursorAt} or (coalesce(${articles.publishedAt}, ${articles.fetchedAt}) = ${cursorAt} and ${articles.id} < ${Number(cursorId)}))`
+        : undefined
     const langWhere = lang ? eq(articles.lang, lang) : undefined
     const sourceWhere = sourceIds && sourceIds.length > 0 ? inArray(articles.sourceId, sourceIds) : undefined
     const periodDays = period === 'today' ? 1 : period === '3d' ? 3 : period === '7d' ? 7 : undefined
@@ -68,11 +72,12 @@ export const listArticles = async ({
             sourceName: sources.value,
             vendor: sources.vendor,
             publishedAt: articles.publishedAt,
+            sortAt: sql<string>`coalesce(${articles.publishedAt}, ${articles.fetchedAt})`,
         })
         .from(articles)
         .innerJoin(sources, eq(articles.sourceId, sources.id))
         .where(where)
-        .orderBy(desc(articles.id))
+        .orderBy(sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt}) desc`, desc(articles.id))
         .limit(limit)
 
     return withKeywords(rows)

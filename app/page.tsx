@@ -18,7 +18,7 @@ const Section = ({ title, href, children }: { title: string; href: string; child
 )
 
 const Home = async () => {
-    const [general, vendor] = await Promise.all([getLatestDailyReports('none', 6), getDailyVendorReports(8)])
+    const [general, vendor] = await Promise.all([getLatestDailyReports('none', 6), getDailyVendorReports(6)])
 
     return (
         <div className='flex flex-col gap-8 py-2'>

@@ -17,8 +17,8 @@ const Page = async ({ params, searchParams }: { params: Promise<{ vendor: string
     const queryClient = getQueryClient()
     await queryClient.prefetchInfiniteQuery({
         queryKey: QUERY_KEY.ARTICLE.LIST(vendor, q, '', '', period),
-        queryFn: ({ pageParam }) => loadArticles({ vendor, q, lang: '', source: '', period, cursor: pageParam as number }),
-        initialPageParam: 0,
+        queryFn: ({ pageParam }) => loadArticles({ vendor, q, lang: '', source: '', period, cursor: pageParam as string }),
+        initialPageParam: '',
     })
 
     return (

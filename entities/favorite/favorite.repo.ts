@@ -30,11 +30,12 @@ export const listFavoriteArticles = async (userId: string): Promise<ArticleListI
             sourceName: sources.value,
             vendor: sources.vendor,
             publishedAt: articles.publishedAt,
+            sortAt: sql<string>`coalesce(${articles.publishedAt}, ${articles.fetchedAt})`,
         })
         .from(articles)
         .innerJoin(sources, eq(articles.sourceId, sources.id))
         .where(inArray(articles.id, ids))
-        .orderBy(desc(articles.id))
+        .orderBy(sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt}) desc`, desc(articles.id))
     const kw = await db
         .select({ articleId: keywordsExtracted.articleId, keyword: keywordsExtracted.keyword })
         .from(keywordsExtracted)

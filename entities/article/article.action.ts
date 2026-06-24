@@ -5,7 +5,7 @@ import { listArticles } from './article.repo'
 import type { Lang, Vendor } from '@entities/source/provider.type'
 
 const listCached = unstable_cache(
-    (vendor: string, q: string, lang: string, source: string, period: string, cursor: number) =>
+    (vendor: string, q: string, lang: string, source: string, period: string, cursor: string) =>
         listArticles({
             vendor: vendor as Vendor | 'none' | 'any',
             q: q || undefined,
@@ -32,8 +32,9 @@ export const loadArticles = async ({
     lang: string
     source: string
     period: string
-    cursor: number
+    cursor: string
 }) => {
     const items = await listCached(vendor, q, lang, source, period, cursor)
-    return { items, nextCursor: items.length === 20 ? items[items.length - 1].id : null }
+    const last = items[items.length - 1]
+    return { items, nextCursor: items.length === 20 ? `${last.sortAt}|${last.id}` : null }
 }

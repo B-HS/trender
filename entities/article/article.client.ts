@@ -9,8 +9,8 @@ type ArticleQueryArgs = { vendor: string; q: string; lang: string; source: strin
 export const useArticles = ({ vendor, q, lang, source, period }: ArticleQueryArgs) =>
     useInfiniteQuery({
         queryKey: QUERY_KEY.ARTICLE.LIST(vendor, q, lang, source, period),
-        initialPageParam: 0,
-        queryFn: ({ pageParam }) => loadArticles({ vendor, q, lang, source, period, cursor: pageParam as number }),
+        initialPageParam: '',
+        queryFn: ({ pageParam }) => loadArticles({ vendor, q, lang, source, period, cursor: pageParam as string }),
         getNextPageParam: (last) => last.nextCursor ?? undefined,
     })
 

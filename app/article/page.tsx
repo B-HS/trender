@@ -20,8 +20,8 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ q?: string; lang
     const [, sourceRows] = await Promise.all([
         queryClient.prefetchInfiniteQuery({
             queryKey: QUERY_KEY.ARTICLE.LIST('none', q, lang, source, period),
-            queryFn: ({ pageParam }) => loadArticles({ vendor: 'none', q, lang, source, period, cursor: pageParam as number }),
-            initialPageParam: 0,
+            queryFn: ({ pageParam }) => loadArticles({ vendor: 'none', q, lang, source, period, cursor: pageParam as string }),
+            initialPageParam: '',
         }),
         listSourceOptions('none', lang as Lang),
     ])
