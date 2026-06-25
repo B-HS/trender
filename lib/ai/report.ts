@@ -21,7 +21,12 @@ const LANG_CONFIG: Record<Lang, { language: string; daily: string; weekly: strin
 const instruction = (language: string) =>
     `You are an analyst writing an in-depth AI/tech trend report. Your entire response MUST be written in natural, fluent ${language}; ` +
     `translate non-${language} concepts but keep proper nouns (product, company, code identifiers) in their original form.\n` +
-    'You are given a numbered list of articles. Group the key trends into 2-4 topics and summarize each in depth.\n' +
+    'You are given a numbered list of articles. Identify 3-4 key trends and write a thorough section for each.\n' +
+    '\n' +
+    'Requirements:\n' +
+    '- Write a substantial report, NOT a brief summary. Each topic should be 2-3 full paragraphs explaining what is happening, why it matters, and how the articles connect.\n' +
+    '- Cover all the major articles across the topics; do not omit important items.\n' +
+    '- Be concrete: name the products, companies, techniques, and numbers from the articles.\n' +
     '\n' +
     'Output format: GitHub Flavored Markdown only.\n' +
     '- Use ##, ### for headings (not bold), - for bullets, **bold**, inline `code`, > blockquotes, | tables where useful.\n' +
@@ -47,6 +52,7 @@ export const generateReport = async (kind: ReportKind, vendor: Vendor | null, la
         model: getEnv().TRANSLATE_MODEL,
         instructions: instruction(config.language),
         input: [{ role: 'user', text: list }],
+        effort: 'medium',
     })
     if (!markdown) return null
 
