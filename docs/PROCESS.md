@@ -33,6 +33,25 @@
 - [x] 8. 로그인(유저이름)+북마크 — `entities/auth`·`entities/favorite`, `/api/auth/*`·`/api/favorites`, 세션쿠키(`lib/auth/session.ts`), `AuthNav`+`BookmarkButton`+`/bookmarks`.
 - [x] 9. FE — 홈(일반/기업 일일리포트, 로고→`/`), 기사(무한스크롤)+상세(번역본문/키워드/원문), 리포트 목록/상세(md 렌더), 기업(사이드바 일일·주간 리포트+벤더별 기사), 반응형, virtual scroll·go-to-top. `next build` 통과.
 
+- [x] 10. 성능·토큰 최적화 + 번역/리포트 대량 백필 + FE 수정 (2026-06-24~29) — 아래 별도 섹션. 전체 narrative는 `docs/history/2026-06-session.md`, 운영 함정은 `docs/memory/ops-and-gotchas.md`, 백필 스크립트는 `docs/utils/backfill/`.
+
+## 10. 성능·백필·FE 수정 (2026-06-24 ~ 06-29)
+
+> 발단: crawlWorkflow가 2시간씩 돌고 토큰 과다. 진짜 원인 = OpenAI/HF 피드가 전체 아카이브 노출 → 컷오프 없는 크롤러가 옛 글을 매 런 번역(아카이브 백필). 상세: `docs/history/2026-06-session.md`.
+
+코드(전부 `vercel` 브랜치 = 프로덕션, 푸시됨):
+- `3209490` 크론 중복 락(`app_locks`+`entities/lock`) + enrich 배치화(`workflows/crawl.ts`) + crawl `*/30`→`0 * * * *`.
+- `79df544` 크롤 14일 컷오프(`lib/crawl/pipeline.ts`).
+- `511df89` enrich 2026 필터(`listPendingArticleIds`).
+- `f4fea60` 게시글 정렬 `coalesce(published,fetched) desc` + 키셋 커서(string) + 메인 기업 6개.
+- `051f036` 리포트 프롬프트 강화 + `effort: 'medium'`(`lib/ai/report.ts`).
+
+DB(데이터, 미커밋): `app_locks` 추가(0003 SQL 직접 적용 — **db:push 기반이라 db:migrate 금지**). 비-ko 2026+ 번역 백필. 리포트 일일/주간 백필(영어 포함 8조합, 기사 `fetched_at` 윈도우). 리포트 `created_at = period_end` 보정.
+
+백필 도구: `docs/utils/backfill/` (`translate-backfill.ts` flash, `report-backfill.ts` pro/codex, `fix-report-created.ts`). README에 실행법·파라미터·함정.
+
+현재 상태(2026-06-29): 비-ko 미번역 잔여 1건(116905 거대본문 타임아웃). 리포트 일일 169/주간 36, 최신 6/29. **codex는 6/30까지 rate limit** → 그전까진 Ollama Cloud 백필로 보완.
+
 ## 검증 필요 시점
 
 - 각 구현 단위마다 사용자에게 테스트 요청 (테스트는 사용자가 직접 수행)
