@@ -90,18 +90,25 @@ export const getReport = async (id: number) => {
     return row ?? null
 }
 
-export const getArticlesForPeriod = async ({ vendor, since, limit = 30 }: { vendor: Vendor | 'none'; since: string; limit?: number }) => {
+export const getArticlesForPeriod = async ({
+    vendor,
+    since,
+    limit = 30,
+    lang,
+}: {
+    vendor: Vendor | 'none'
+    since: string
+    limit?: number
+    lang?: Lang
+}) => {
     const vendorWhere = vendor === 'none' ? isNull(sources.vendor) : eq(sources.vendor, vendor)
+    const titleExpr = lang ? articles.titleOriginal : sql<string>`coalesce(${articles.titleTranslatedKo}, ${articles.titleOriginal})`
+    const bodyExpr = lang ? articles.contentOriginal : sql<string>`coalesce(${articles.contentTranslatedKo}, ${articles.contentOriginal})`
     return db
-        .select({
-            id: articles.id,
-            title: sql<string>`coalesce(${articles.titleTranslatedKo}, ${articles.titleOriginal})`,
-            body: sql<string>`coalesce(${articles.contentTranslatedKo}, ${articles.contentOriginal})`,
-            url: articles.url,
-        })
+        .select({ id: articles.id, title: titleExpr, body: bodyExpr, url: articles.url })
         .from(articles)
         .innerJoin(sources, eq(articles.sourceId, sources.id))
-        .where(and(vendorWhere, gte(articles.fetchedAt, since)))
+        .where(and(vendorWhere, gte(articles.fetchedAt, since), lang ? eq(articles.lang, lang) : undefined))
         .orderBy(desc(articles.id))
         .limit(limit)
 }

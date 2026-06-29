@@ -56,7 +56,7 @@ export const generateReport = async (kind: ReportKind, vendor: Vendor | null, la
 
     if (skipIfExists && (await reportExists({ kind, lang, vendor, periodStart: toDate(since), periodEnd: toDate(now) }))) return null
 
-    const articles = await getArticlesForPeriod({ vendor: vendorKey, since: toMysql(since), limit: 30 })
+    const articles = await getArticlesForPeriod({ vendor: vendorKey, since: toMysql(since), limit: 30, lang: vendor === null ? lang : undefined })
     if (articles.length === 0) return null
 
     const list = articles.map((a, i) => `${i + 1}. ${a.title}\n${summarize(a.body)}`).join('\n\n')
