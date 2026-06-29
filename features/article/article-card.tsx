@@ -1,9 +1,9 @@
 import type { ArticleListItem } from '@entities/article/article.repo'
 import { BookmarkButton } from '@features/common/bookmark-button'
 import { VENDOR_LABEL } from '@lib/constants'
+import { formatKstDate } from '@lib/date'
 import { decodeEntities, sourceBadges } from '@lib/utils'
 import { Badge } from '@ui/badge'
-import dayjs from 'dayjs'
 import Link from 'next/link'
 import { FC } from 'react'
 
@@ -20,9 +20,7 @@ export const ArticleCard: FC<{ article: ArticleListItem }> = ({ article }) => {
                     ))}
                 </div>
                 <div className='flex items-center gap-1 shrink-0'>
-                    <time className='text-xs text-muted-foreground'>
-                        {article.publishedAt ? dayjs(article.publishedAt).format('YYYY-MM-DD') : ''}
-                    </time>
+                    <time className='text-xs text-muted-foreground'>{formatKstDate(article.publishedAt)}</time>
                     <BookmarkButton targetType='article' targetId={article.id} />
                 </div>
             </header>

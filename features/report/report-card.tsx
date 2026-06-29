@@ -2,7 +2,6 @@ import type { ReportListItem } from '@entities/report/report.repo'
 import { BookmarkButton } from '@features/common/bookmark-button'
 import { VENDOR_LABEL } from '@lib/constants'
 import { Badge } from '@ui/badge'
-import dayjs from 'dayjs'
 import Link from 'next/link'
 import { FC } from 'react'
 
@@ -17,7 +16,7 @@ export const ReportCard: FC<{ report: ReportListItem }> = ({ report }) => {
                     {report.vendor && <Badge className='rounded-xs h-fit px-1'>{VENDOR_LABEL[report.vendor]}</Badge>}
                 </div>
                 <div className='flex items-center gap-1'>
-                    <time className='text-xs text-muted-foreground'>{dayjs(report.createdAt).format('YYYY-MM-DD')}</time>
+                    <time className='text-xs text-muted-foreground'>{report.periodEnd}</time>
                     <BookmarkButton targetType='report' targetId={report.id} />
                 </div>
             </header>

@@ -2,11 +2,11 @@ import { getArticle } from '@entities/article/article.repo'
 import { BookmarkButton } from '@features/common/bookmark-button'
 import { ContentToggle } from '@features/common/content-toggle'
 import { VENDOR_LABEL } from '@lib/constants'
+import { formatKstDate } from '@lib/date'
 import { renderContent } from '@lib/render/content'
 import { decodeEntities, getHostname } from '@lib/utils'
 import { Badge } from '@ui/badge'
 import { buttonVariants } from '@ui/button'
-import dayjs from 'dayjs'
 import { ExternalLink } from 'lucide-react'
 import { notFound } from 'next/navigation'
 
@@ -25,7 +25,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 <div className='flex items-center gap-1.5 text-sm text-muted-foreground'>
                     {article.vendor && <Badge className='rounded-xs px-1 shrink-0'>{VENDOR_LABEL[article.vendor]}</Badge>}
                     <span className='truncate min-w-0'>{getHostname(article.url)}</span>
-                    {article.publishedAt && <time className='shrink-0 whitespace-nowrap'>· {dayjs(article.publishedAt).format('YYYY-MM-DD')}</time>}
+                    {article.publishedAt && <time className='shrink-0 whitespace-nowrap'>· {formatKstDate(article.publishedAt)}</time>}
                 </div>
                 {article.keywords.length > 0 && (
                     <ul className='flex flex-wrap gap-1'>
