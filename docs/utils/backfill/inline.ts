@@ -55,15 +55,18 @@ const doneFromLogs = () => {
 }
 
 const getArticles = async (j: Job) => {
+    const langFilter = j.vendor === null
     const vendorClause = j.vendor === null ? 's.vendor is null' : 's.vendor = ?'
+    const title = langFilter ? 'a.title_original' : 'coalesce(a.title_translated_ko, a.title_original)'
+    const body = langFilter ? 'a.content_original' : 'coalesce(a.content_translated_ko, a.content_original)'
     const params: string[] = []
     if (j.vendor !== null) params.push(j.vendor)
     params.push(`${j.ps} 00:00:00`, `${j.pe} 00:00:00`)
+    if (langFilter) params.push(j.lang)
     const [rows] = (await conn.query(
-        `select a.id, coalesce(a.title_translated_ko, a.title_original) title,
-                coalesce(a.content_translated_ko, a.content_original) body
+        `select a.id, ${title} title, ${body} body
          from articles a join sources s on s.id=a.source_id
-         where ${vendorClause} and a.fetched_at >= ? and a.fetched_at < ?
+         where ${vendorClause} and a.fetched_at >= ? and a.fetched_at < ?${langFilter ? ' and a.lang = ?' : ''}
          order by a.id desc limit 30`,
         params,
     )) as unknown as [{ id: number; title: string; body: string | null }[]]
@@ -99,6 +102,39 @@ if (cmd === 'build') {
     console.log(`worklist built: ${jobs.length} pending`)
     const byKind = jobs.reduce<Record<string, number>>((a, j) => ((a[j.kind] = (a[j.kind] ?? 0) + 1), a), {})
     console.log(JSON.stringify(byKind))
+} else if (cmd === 'buildset') {
+    const langs = (process.env.SET_LANGS ?? '').split(',').filter(Boolean)
+    const vendorNull = process.env.SET_VENDOR === 'null'
+    const [rows] = (await conn.query(
+        `select kind, lang, vendor,
+                date_format(period_start, '%Y-%m-%d') ps,
+                date_format(period_end, '%Y-%m-%d') pe
+         from reports
+         where ${vendorNull ? 'vendor is null' : '1=1'}${langs.length ? ` and lang in (${langs.map(() => '?').join(',')})` : ''}
+         group by kind, lang, vendor, period_start, period_end
+         order by period_end desc, kind asc, lang asc`,
+        langs,
+    )) as unknown as [{ kind: 'daily' | 'weekly'; lang: string; vendor: string | null; ps: string; pe: string }[]]
+    const minArticles = Number(process.env.MIN_ARTICLES ?? 3)
+    const all: Job[] = rows.map((r) => {
+        const cfg = LANG_CONFIG[r.lang]
+        const scope = r.vendor ? VENDOR_LABEL[r.vendor] : cfg.scope
+        return { ...r, title: `${scope} ${r.kind === 'daily' ? cfg.daily : cfg.weekly} (${r.pe})`, done: false }
+    })
+    const jobs: Job[] = []
+    for (const j of all) {
+        const vClause = j.vendor === null ? 's.vendor is null' : 's.vendor = ?'
+        const p: string[] = j.vendor === null ? [] : [j.vendor]
+        p.push(`${j.ps} 00:00:00`, `${j.pe} 00:00:00`)
+        if (j.vendor === null) p.push(j.lang)
+        const [cnt] = (await conn.query(
+            `select count(*) n from articles a join sources s on s.id=a.source_id where ${vClause} and a.fetched_at >= ? and a.fetched_at < ?${j.vendor === null ? ' and a.lang = ?' : ''}`,
+            p,
+        )) as unknown as [{ n: number }[]]
+        if (cnt[0].n >= minArticles) jobs.push(j)
+    }
+    writeFileSync(WORKLIST, JSON.stringify(jobs, null, 2))
+    console.log(`buildset: ${jobs.length}/${all.length} jobs (>=${minArticles} articles, langs=${langs.join(',') || 'all'} vendorNull=${vendorNull})`)
 } else if (cmd === 'status') {
     const jobs = loadWorklist()
     console.log(`pending: ${jobs.filter((j) => !j.done).length} / total ${jobs.length}`)
