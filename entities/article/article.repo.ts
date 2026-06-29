@@ -54,10 +54,14 @@ export const listArticles = async ({
         : undefined
     const langWhere = lang ? eq(articles.lang, lang) : undefined
     const sourceWhere = sourceIds && sourceIds.length > 0 ? inArray(articles.sourceId, sourceIds) : undefined
-    const periodDays = period === 'today' ? 1 : period === '3d' ? 3 : period === '7d' ? 7 : undefined
-    const periodWhere = periodDays
-        ? sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt}) >= (now() - interval ${sql.raw(String(periodDays))} day)`
-        : undefined
+    const kstToday = sql`date(utc_timestamp() + interval 9 hour)`
+    const periodDays = period === '3d' ? 3 : period === '7d' ? 7 : undefined
+    const periodWhere =
+        period === 'today'
+            ? sql`(case when ${articles.publishedAt} is not null then ${articles.publishedAt} >= (${kstToday} - interval 9 hour) else ${articles.fetchedAt} >= ${kstToday} end)`
+            : periodDays
+              ? sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt}) >= (now() - interval ${sql.raw(String(periodDays))} day)`
+              : undefined
     const keyword = q?.trim()
     const searchWhere = keyword
         ? sql`(${articles.titleOriginal} like ${`%${keyword}%`} or ${articles.titleTranslatedKo} like ${`%${keyword}%`})`
