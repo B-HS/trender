@@ -96,6 +96,7 @@ export const getArticlesForPeriod = async ({ vendor, since, limit = 30 }: { vend
         .select({
             id: articles.id,
             title: sql<string>`coalesce(${articles.titleTranslatedKo}, ${articles.titleOriginal})`,
+            body: sql<string>`coalesce(${articles.contentTranslatedKo}, ${articles.contentOriginal})`,
             url: articles.url,
         })
         .from(articles)
