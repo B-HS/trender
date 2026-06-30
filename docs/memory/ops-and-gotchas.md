@@ -51,3 +51,10 @@
 - **병렬 백필 DB 함정**: mysql 풀 기본 `connectionLimit=10` × 병렬 에이전트(~16) = 연결 초과 → `PROTOCOL_CONNECTION_LOST`. 병렬 백필 풀은 **`connectionLimit:2`** + 청크 ≤12. 생성 실패해도 본문 파일(out-*.md)은 남으니 순차 `inline.ts save`로 살림.
 - **공식 5h usage %** 는 statusline stdin JSON `rate_limits.five_hour.used_percentage`에만 있음(Pro/Max, 첫 API응답 후). `~/.claude/statusline-command.sh`가 `~/.ts-trender-cron/usage.txt`로 기록 → 자동 게이팅에 사용. ccusage는 토큰/비용만, 공식 % 없음. LLM 자신은 usage 모름.
 - 도구: `docs/utils/backfill/inline.ts`(build/prompt/save, worklist 기반, 병렬 안전) + `Workflow`로 idx 청크당 sonnet 에이전트. report-backfill에 `ENGINE=claude`·`MODEL`·`KIND`·`MIN_END`·`EXISTING`·`num_ctx` 추가.
+
+## 언어별 리포트 / 타임존 (2026-06-30, 상세 `docs/history/2026-06-30-lang-segmentation-tz.md`)
+- **리포트는 언어별 기사로 분리 종합**: `getArticlesForPeriod`에 `lang` 주면 `a.lang=lang` 필터 + 원문(`title_original`). 일반 리포트(vendor=null)만 적용, **벤더 리포트는 lang 필터 금지**(영어 소스라 ko 필터 시 0건). ko=한국어/ja=일본어/en=영어 기사.
+- **타임존**: `published_at`=UTC 저장(normalizeDate toISOString), `fetched_at`=KST 저장(TIMESTAMP, DB 세션 `time_zone=SYSTEM=KST`). 표시는 `lib/date.ts` `formatKstDate`(dayjs utc+timezone, `dayjs.utc(v).tz('Asia/Seoul')`) — Z 없는 naive를 dayjs가 로컬 간주해 변환 안 하던 버그 수정. 리포트 카드는 `periodEnd`(순수 date) 표시. **DB 두 컬럼 tz 불일치는 미해결**(coalesce 정렬 미세 글리치, published null 39건만).
+- **today 필터 = KST 달력 오늘**: published(UTC)는 `date(utc_timestamp()+9h)-9h`, fetched(KST)는 `date(utc_timestamp()+9h)` 경계. KST는 DST 없어 9h 고정.
+- **워크플로 에이전트 프롬프트 언어 편향 주의**: "Korean site"/"## 종합" 같은 한국어 힌트가 있으면 ja/en 에이전트가 입력·지시 무시하고 한국어로 작성. 프롬프트는 언어중립 + "타겟 언어로만" 강제. 재생성 후 Hangul/Kana **글자수 임계**(kana≥15→ja, hangul≥30→ko)로 언어 무결성 검출(존재 test는 인용 오탐).
+- **worklist.json 덮어쓰기 금지(워크플로 실행 중)**: 워크플로 에이전트는 `claude -p` 프로세스로 안 보임 → `pgrep`로 완료 판단 말고 **완료 알림 받은 뒤** worklist 교체. 안 그러면 잘못된 idx 저장(오염).
