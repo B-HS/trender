@@ -1,6 +1,6 @@
 import type { Lang, Provider, RawListItem } from '@entities/source/provider.type'
 import { fetchJson } from '@lib/crawl/fetch'
-import { normalizeDate } from '@lib/crawl/factories'
+import { LANG_TZ, normalizeDate } from '@lib/crawl/factories'
 
 type ZennListResponse = {
     articles: { title: string; slug: string; path: string; published_at: string; user: { username: string } }[]
@@ -22,7 +22,7 @@ export const createZennProvider = (topic: 'ai' | 'llm'): Provider => ({
             url: `https://zenn.dev${a.path}`,
             titleOriginal: a.title,
             lang: 'ja',
-            publishedAt: normalizeDate(a.published_at),
+            publishedAt: normalizeDate(a.published_at, LANG_TZ.ja),
             author: a.user.username,
             extra: { slug: a.slug },
         }))

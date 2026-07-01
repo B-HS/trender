@@ -1,6 +1,6 @@
 import type { Provider, RawListItem } from '@entities/source/provider.type'
 import { fetchText } from '@lib/crawl/fetch'
-import { normalizeDate } from '@lib/crawl/factories'
+import { LANG_TZ, normalizeDate } from '@lib/crawl/factories'
 import { parseFeed } from '@lib/crawl/feed'
 import { extractNuxtBody } from '@lib/crawl/html'
 
@@ -20,7 +20,7 @@ export const createKakaoProvider = (): Provider => ({
             url: e.link,
             titleOriginal: e.title,
             lang: 'ko',
-            publishedAt: normalizeDate(e.published),
+            publishedAt: normalizeDate(e.published, LANG_TZ.ko),
             author: e.author,
             summary: e.summaryHtml,
         })),

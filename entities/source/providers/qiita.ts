@@ -1,6 +1,6 @@
 import type { Lang, Provider, RawListItem } from '@entities/source/provider.type'
 import { fetchJson } from '@lib/crawl/fetch'
-import { normalizeDate } from '@lib/crawl/factories'
+import { LANG_TZ, normalizeDate } from '@lib/crawl/factories'
 
 type QiitaItem = {
     title: string
@@ -28,7 +28,7 @@ export const createQiitaProvider = (tag: 'ai' | 'llm', minStocks = 30): Provider
             url: it.url,
             titleOriginal: it.title,
             lang: 'ja',
-            publishedAt: normalizeDate(it.created_at),
+            publishedAt: normalizeDate(it.created_at, LANG_TZ.ja),
             author: it.user.id,
             content: it.rendered_body,
             extra: { likes: it.likes_count, stocks: it.stocks_count },

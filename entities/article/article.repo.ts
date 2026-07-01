@@ -48,19 +48,19 @@ export const listArticles = async ({
     period?: 'today' | '3d' | '7d'
 }) => {
     const vendorWhere = vendor === 'any' ? undefined : vendor === 'none' ? isNull(sources.vendor) : eq(sources.vendor, vendor)
+    const sortUtc = sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt} - interval 9 hour)`
     const [cursorAt, cursorId] = cursor ? cursor.split('|') : []
-    const cursorWhere = cursor
-        ? sql`(coalesce(${articles.publishedAt}, ${articles.fetchedAt}) < ${cursorAt} or (coalesce(${articles.publishedAt}, ${articles.fetchedAt}) = ${cursorAt} and ${articles.id} < ${Number(cursorId)}))`
-        : undefined
+    const cursorWhere = cursor ? sql`(${sortUtc} < ${cursorAt} or (${sortUtc} = ${cursorAt} and ${articles.id} < ${Number(cursorId)}))` : undefined
     const langWhere = lang ? eq(articles.lang, lang) : undefined
     const sourceWhere = sourceIds && sourceIds.length > 0 ? inArray(articles.sourceId, sourceIds) : undefined
-    const kstToday = sql`date(utc_timestamp() + interval 9 hour)`
+    const kstDayStartUtc = sql`(date(utc_timestamp() + interval 9 hour) - interval 9 hour)`
+    const kstDayEndUtc = sql`(date(utc_timestamp() + interval 9 hour) + interval 15 hour)`
     const periodDays = period === '3d' ? 3 : period === '7d' ? 7 : undefined
     const periodWhere =
         period === 'today'
-            ? sql`(case when ${articles.publishedAt} is not null then ${articles.publishedAt} >= (${kstToday} - interval 9 hour) else ${articles.fetchedAt} >= ${kstToday} end)`
+            ? sql`(${sortUtc} >= ${kstDayStartUtc} and ${sortUtc} < ${kstDayEndUtc})`
             : periodDays
-              ? sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt}) >= (now() - interval ${sql.raw(String(periodDays))} day)`
+              ? sql`${sortUtc} >= (utc_timestamp() - interval ${sql.raw(String(periodDays))} day)`
               : undefined
     const keyword = q?.trim()
     const searchWhere = keyword
@@ -76,12 +76,12 @@ export const listArticles = async ({
             sourceName: sources.value,
             vendor: sources.vendor,
             publishedAt: articles.publishedAt,
-            sortAt: sql<string>`coalesce(${articles.publishedAt}, ${articles.fetchedAt})`,
+            sortAt: sql<string>`${sortUtc}`,
         })
         .from(articles)
         .innerJoin(sources, eq(articles.sourceId, sources.id))
         .where(where)
-        .orderBy(sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt}) desc`, desc(articles.id))
+        .orderBy(sql`${sortUtc} desc`, desc(articles.id))
         .limit(limit)
 
     return withKeywords(rows)
