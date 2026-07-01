@@ -10,6 +10,7 @@
 | `translate-backfill.ts` | 비-ko 기사 번역+키워드(2026+만) | Ollama `deepseek-v4-flash:cloud` |
 | `report-backfill.ts` | 일일/주간 리포트 생성(영어 포함 8조합) | Ollama `deepseek-v4-pro:cloud` (기본) / `ENGINE=codex` 시 프로덕션 codex |
 | `fix-report-created.ts` | 리포트 `created_at` 을 `period_end` 로 보정 | DB UPDATE만 |
+| `tz-published-fix.ts` | KST-wallclock 저장된 `published_at`(aitimes/d2.naver) 을 UTC 로 보정(−9h) | DB UPDATE만 |
 
 ## 실행 (repo 루트에서)
 
@@ -30,6 +31,10 @@ OLLAMA_KEY='x' ENGINE=codex FORCE=1 BASE=2026-06-24 DAILY_DAYS=1 WEEKLY_WEEKS=1 
 
 # 4) 리포트 생성 후 created_at 보정 (백필은 created_at=now로 들어가므로 필수)
 bun docs/utils/backfill/fix-report-created.ts
+
+# 5) published_at 타임존 보정 — DRY로 대상 먼저 확인 (aitimes/d2.naver KST-wallclock → UTC)
+DRY=1 bun docs/utils/backfill/tz-published-fix.ts
+bun docs/utils/backfill/tz-published-fix.ts
 ```
 
 ## 파라미터 (env)
@@ -59,3 +64,4 @@ bun docs/utils/backfill/fix-report-created.ts
 - **Ollama 호출**: `https://ollama.com/api/chat`, `think:false`, 번역은 `options.num_ctx:32768`(긴 본문 잘림 방지), `AbortSignal.timeout(120000)`(무한대기 방지). **키 폐기/만료 시 401 Unauthorized** → 새 키 필요.
 - **`report-backfill.ts:12` 의 codex import 절대경로** `/Users/gkn/ts-trender/lib/ai/codex.ts` — 레포 경로가 다르면 수정.
 - 스크립트는 키를 **env로만** 받고 파일에 저장 안 함. 커밋해도 시크릿 없음.
+- **`tz-published-fix.ts`(2026-07-01)**: `published_at`이 KST 벽시계값으로 잘못 저장된 소스(현재 aitimes=6, d2.naver=286)를 −9h 해 UTC로 통일. 대상은 `timestampdiff(hour, published_at, fetched_at) < 6`(=KST-wallclock; UTC 저장 행은 ~9~10h라 제외)로 특정 → **멱등**(보정 후 gap 9~10h로 재선택 불가). 근본원인·판별법은 `docs/memory/ops-and-gotchas.md` "타임존 근본수정". 새 오염 소스가 생기면 `SOURCE_IDS`에 추가. (레거시 공유 DB지만 `articles` UPDATE는 허용됨 — `reports` DELETE만 classifier 차단.)

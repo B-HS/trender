@@ -36,7 +36,8 @@
 
 ## 정렬 (게시글 공통)
 
-- **모든 게시글 정렬 = 생성일 desc.** 리포트=`created_at`(=period_end) desc. 기사·북마크=**`coalesce(published_at, fetched_at) desc, id desc`**(예전 `id desc`는 표시 발행일과 어긋나 날짜 섞임).
+- **모든 게시글 정렬 = 생성일 desc.** 리포트=`created_at`(=period_end) desc. 기사·북마크=**`sortUtc desc, id desc`**(예전 `id desc`는 표시 발행일과 어긋나 날짜 섞임).
+  - **`sortUtc = coalesce(published_at, fetched_at - interval 9 hour)`** (2026-07-01, `listArticles`). 예전 `coalesce(published_at, fetched_at)`는 published(UTC)와 fetched(세션 KST)를 섞어 정렬이 어긋났다 → 전부 UTC 기준으로 통일. `fetched_at`은 세션 KST라 −9h로 UTC화(세션 KST 고정 가정). SELECT `sortAt`·`orderBy`·커서 비교 모두 `sortUtc` 사용. → 아래 "타임존 근본수정" 참조.
 - 기사 무한스크롤 커서: `id`(number) → **복합 키셋 `"sortAt|id"`(string)**. 영향 파일: `entities/article/article.repo.ts`(listArticles), `article.action.ts`, `article.client.ts`, `app/article/page.tsx`, `app/vendor/[vendor]/page.tsx`, `app/api/articles/route.ts`. `ArticleListItem`에 `sortAt: string` 추가.
 
 ## 인프라 / 시크릿
@@ -54,7 +55,21 @@
 
 ## 언어별 리포트 / 타임존 (2026-06-30, 상세 `docs/history/2026-06-30-lang-segmentation-tz.md`)
 - **리포트는 언어별 기사로 분리 종합**: `getArticlesForPeriod`에 `lang` 주면 `a.lang=lang` 필터 + 원문(`title_original`). 일반 리포트(vendor=null)만 적용, **벤더 리포트는 lang 필터 금지**(영어 소스라 ko 필터 시 0건). ko=한국어/ja=일본어/en=영어 기사.
-- **타임존**: `published_at`=UTC 저장(normalizeDate toISOString), `fetched_at`=KST 저장(TIMESTAMP, DB 세션 `time_zone=SYSTEM=KST`). 표시는 `lib/date.ts` `formatKstDate`(dayjs utc+timezone, `dayjs.utc(v).tz('Asia/Seoul')`) — Z 없는 naive를 dayjs가 로컬 간주해 변환 안 하던 버그 수정. 리포트 카드는 `periodEnd`(순수 date) 표시. **DB 두 컬럼 tz 불일치는 미해결**(coalesce 정렬 미세 글리치, published null 39건만).
-- **today 필터 = KST 달력 오늘**: published(UTC)는 `date(utc_timestamp()+9h)-9h`, fetched(KST)는 `date(utc_timestamp()+9h)` 경계. KST는 DST 없어 9h 고정.
+- **타임존**: 표시는 `lib/date.ts` `formatKstDate`(dayjs utc+timezone, `dayjs.utc(v).tz('Asia/Seoul')`) — Z 없는 naive를 dayjs가 로컬 간주해 변환 안 하던 버그 수정. 리포트 카드는 `periodEnd`(순수 date) 표시. **⚠️ 당시 "published_at=UTC 저장, 두 컬럼 tz 불일치 미해결"이라 적었으나, published_at은 소스별로 UTC/KST 혼재였고 2026-07-01에 근본수정됨 → 아래 "타임존 근본수정" 참조.**
+- (당시) today 필터 = KST 달력 오늘, published/fetched case-분기. **→ 2026-07-01에 `sortUtc` 단일 기준 `[하한,상한)`으로 대체.**
 - **워크플로 에이전트 프롬프트 언어 편향 주의**: "Korean site"/"## 종합" 같은 한국어 힌트가 있으면 ja/en 에이전트가 입력·지시 무시하고 한국어로 작성. 프롬프트는 언어중립 + "타겟 언어로만" 강제. 재생성 후 Hangul/Kana **글자수 임계**(kana≥15→ja, hangul≥30→ko)로 언어 무결성 검출(존재 test는 인용 오탐).
 - **worklist.json 덮어쓰기 금지(워크플로 실행 중)**: 워크플로 에이전트는 `claude -p` 프로세스로 안 보임 → `pgrep`로 완료 판단 말고 **완료 알림 받은 뒤** worklist 교체. 안 그러면 잘못된 idx 저장(오염).
+
+## 타임존 근본수정 (2026-07-01, 상세 `docs/history/2026-07-01-prose-overflow-and-tz-filter.md`)
+
+- **`published_at` 저장 tz는 소스/시점별로 혼재**였다(UTC ↔ KST-wallclock). 근본 원인: 기존 `normalizeDate = new Date(raw).toISOString()`이 **오프셋 없는** 피드 날짜를 런타임 로컬로 해석 → **Vercel(UTC)**에서 KST 벽시계값이 +9h 부풀려 저장. **aitimes**가 ~2026-06-23부터 pubDate를 오프셋 없는 `"YYYY-MM-DD HH:MM:SS"`로 바꿔 234행, d2.naver 4행 오염. (로컬=KST에선 우연히 맞아 안 보임 → **크롤 tz 버그는 반드시 프로덕션(Vercel=UTC) 기준으로 판단**.)
+- **`normalizeDate(raw, tz)`는 이제 결정론적**(`lib/crawl/factories.ts`): 오프셋 있으면 `new Date`(UTC), 없으면 `dayjs.tz(raw, sourceTz)`. 피드 provider는 `LANG_TZ[lang]`(ko→Seoul, ja→Tokyo, en→UTC) 전달. **새 피드/provider 추가 시 offset 없는 날짜면 반드시 source tz 전달.**
+- **소스별 저장 tz 판별법**: `avg(timestampdiff(hour, published_at, fetched_at))` — `fetched_at`이 세션 KST라 published가 UTC면 ~9~10h, KST-wallclock이면 ~0~1h. (gap은 크롤 지연과 섞이니 최근 윈도우로 봐야 함.)
+- **쿼리는 전부 UTC 기준**: `sortUtc = coalesce(published_at, fetched_at - interval 9 hour)`(정렬 섹션 참조). today = `[date(utc_timestamp()+9h)-9h, +15h)`. 3d/7d = `utc_timestamp() - interval N day`. 세션 `@@time_zone=SYSTEM=KST`라 `fetched_at`은 −9h로 UTC화(세션 KST 고정 전제 — 바뀌면 이 상수 재검토).
+- **백필은 `gap<6h` 조건이라 멱등**(교정 후 gap 9~10h로 재선택 불가). tz 백필 스크립트 `docs/utils/backfill/tz-published-fix.ts`. (레거시 공유 DB, `reports` 직접 DELETE는 classifier 차단 — articles UPDATE는 허용됐음.)
+
+## 콘텐츠 렌더 / prose (2026-07-01)
+
+- **커스텀 `.prose`(`app/globals.css`)는 코드블록/테이블/이미지/긴토큰 가드가 없으면 가로 오버플로** → 전역 `scrollbar-width:none`이라 **조용히 페이지 가로 스크롤**. 필수 가드: 루트 `break-words`, `img{max-w-full h-auto}`, `pre{overflow/줄바꿈+다크박스}`, 인라인 `:not(pre)>code`, `table{block w-max max-w-full overflow-x-auto}`, prose 컨테이너(flex 자식) `min-w-0`.
+- **코드블록 스타일은 CSS로 이식**(BBlog는 `CodeBlock` 컴포넌트/rehype-react지만 ts-trender는 문자열-HTML). `pre code`: `text-2xs lg:text-sm whitespace-pre-wrap break-all`(모바일 10px, 줄바꿈). highlight.js 다크테마와 겹치면 **소스 순서/특이도**로 오버라이드(배경 transparent, 구문색 유지). BBlog `.prose` CSS는 이것 말고는 ts-trender와 동일.
+- **⚠️ Turbopack `.next` stale CSS**: dev가 `globals.css` 수정 후에도 옛 CSS 청크(같은 이름, 옛 내용)를 계속 서빙 → HMR·재시작으로도 안 되고 **`.next` 비워야** 반영. `rm -rf` 차단 환경이면 `mv .next` 로 레포 밖 이동 후 재기동(`.gitignore`는 `.next`만 무시하니 이동 위치 주의). globals.css 수정이 화면에 안 보이면 이걸 먼저 의심.

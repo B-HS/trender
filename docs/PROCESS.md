@@ -52,6 +52,18 @@ DB(데이터, 미커밋): `app_locks` 추가(0003 SQL 직접 적용 — **db:pus
 
 현재 상태(2026-06-29): 비-ko 미번역 잔여 1건(116905 거대본문 타임아웃). 리포트 일일 169/주간 36, 최신 6/29. **codex는 6/30까지 rate limit** → 그전까진 Ollama Cloud 백필로 보완.
 
+## 11. 본문 오버플로/코드블록 + 검색 타임존 근본수정 (2026-07-01)
+
+> 상세: `docs/history/2026-07-01-prose-overflow-and-tz-filter.md`. 함정: `docs/memory/ops-and-gotchas.md`(타임존 근본수정·prose·Turbopack).
+
+- [x] 본문 가로 오버플로 수정 + BBlog 코드블록 스타일 CSS 이식(모바일 폰트 축소·줄바꿈·다크박스). `app/globals.css` `.prose` + `content-toggle`/`content-view` `min-w-0`. 커밋 `638450d` 푸시됨.
+- [x] 검색 "기간/오늘" 타임존 근본수정 — 원인: aitimes 오프셋 없는 pubDate가 Vercel(UTC)에서 KST-wallclock 저장(+9h) + 쿼리의 published(UTC)/fetched(KST) 혼용.
+  - A. `lib/crawl/factories.ts` `normalizeDate(raw, tz)` 결정론화 + provider `LANG_TZ` 전달.
+  - C. `entities/article/article.repo.ts` `listArticles` `sortUtc` 단일 UTC 기준(정렬/커서/period), today `[하한,상한)`, 3d/7d `utc_timestamp()`.
+  - B. 백필(DB, 미커밋): aitimes/d2.naver 오염 238행 `published_at -9h`(`gap<6h`, 멱등). 스크립트 `docs/utils/backfill/tz-published-fix.ts`.
+  - 검증: 정렬 실제 시간순 interleave, today KST일 오탐 0, `tsc` 0.
+- 미결: `app/api/articles/route.ts`는 dead code(client=서버액션)라 미수정.
+
 ## 검증 필요 시점
 
 - 각 구현 단위마다 사용자에게 테스트 요청 (테스트는 사용자가 직접 수행)
