@@ -33,7 +33,7 @@ export const ContentToggle: FC<ContentToggleProps> = ({ originalTitle, translate
                 </div>
             )}
             {html ? (
-                <div className={cn('prose max-w-none')} dangerouslySetInnerHTML={{ __html: html }} />
+                <div className={cn('prose min-w-0 max-w-none')} dangerouslySetInnerHTML={{ __html: html }} />
             ) : (
                 <p className='text-muted-foreground'>본문이 없습니다.</p>
             )}

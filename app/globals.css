@@ -165,7 +165,7 @@
 }
 
 .prose {
-    @apply text-foreground;
+    @apply text-foreground break-words;
     h1,
     h2,
     h3,
@@ -204,6 +204,21 @@
         @apply font-medium text-primary underline underline-offset-4;
     }
 
+    img {
+        @apply max-w-full h-auto;
+    }
+
+    pre {
+        @apply my-6 max-w-full overflow-hidden rounded-lg border border-neutral-600 bg-neutral-800 p-3 text-neutral-100 lg:p-4;
+        code {
+            @apply block bg-transparent p-0 text-2xs whitespace-pre-wrap break-all lg:text-sm;
+        }
+    }
+
+    :not(pre) > code {
+        @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em] break-words;
+    }
+
     blockquote {
         @apply mt-6 border-l-2 pl-6 italic;
     }
@@ -217,7 +232,7 @@
     }
 
     table {
-        @apply w-full table-auto;
+        @apply my-6 block w-max max-w-full table-auto overflow-x-auto;
     }
 
     thead {
@@ -241,7 +256,7 @@
     }
 
     div:has(> table) {
-        @apply my-6 w-full overflow-y-auto;
+        @apply my-6 w-full max-w-full overflow-x-auto;
     }
 }
 
