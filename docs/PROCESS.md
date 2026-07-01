@@ -64,6 +64,19 @@ DB(데이터, 미커밋): `app_locks` 추가(0003 SQL 직접 적용 — **db:pus
   - 검증: 정렬 실제 시간순 interleave, today KST일 오탐 0, `tsc` 0.
 - 미결: `app/api/articles/route.ts`는 dead code(client=서버액션)라 미수정.
 
+## 12. 페이지별 수동 캐시 revalidate 버튼 (2026-07-02)
+
+> 상세: `docs/history/2026-07-02-per-page-revalidate-button.md`. Next 캐시 API 함정: `docs/memory/ops-and-gotchas.md`.
+
+- [x] DB 확인 — 7월 1일 기사(`fetched_at` 280 / `published_at` 202)·리포트(07-01 08시 생성 7건, id 751~757) 정상 존재. 노출 지연 = Next.js 캐시.
+- [x] 각 페이지에 수동 revalidate 버튼 추가 — 커밋 `5010c21` 푸시됨.
+  - `lib/revalidate.action.ts`(`'use server'`): `updateTag`(Next 16, 서버액션 read-your-own-writes) + `revalidatePath`.
+  - `features/common/revalidate-button.tsx`(클릭→액션→`router.refresh()`→toast) + `features/common/page-header.tsx`(리스트 4곳 헤더 공통화).
+  - 배치 7곳: 홈/기사목록(`articles`)/기사상세/리포트목록(`reports`)/리포트상세/벤더기사(`articles`)/벤더리포트. `/bookmarks`(force-dynamic)·`/vendor`(redirect) 제외.
+  - 검증: `tsc` 0 · `next build` 통과 · 프로덕션 7페이지 200+버튼 · 적대적 리뷰 correctness 0.
+- [x] 리포트 크론 시각 변경(`vercel.json`) — Vercel 크론은 UTC. daily `0 23`→**`0 20`**(KST 08→05시), weekly `0 22 * * 0`→**`0 16 * * 0`**(KST 월 07→01시).
+- [x] 오늘 daily 리포트 수동 생성 — period 06-30→07-01 **6건**(758~763, general ko/ja/en + openai/anthropic/google). naver/kakao는 윈도우 내 기사 0건이라 스킵(정상). DB 데이터라 미커밋.
+
 ## 검증 필요 시점
 
 - 각 구현 단위마다 사용자에게 테스트 요청 (테스트는 사용자가 직접 수행)

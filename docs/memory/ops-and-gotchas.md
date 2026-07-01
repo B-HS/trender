@@ -73,3 +73,19 @@
 - **커스텀 `.prose`(`app/globals.css`)는 코드블록/테이블/이미지/긴토큰 가드가 없으면 가로 오버플로** → 전역 `scrollbar-width:none`이라 **조용히 페이지 가로 스크롤**. 필수 가드: 루트 `break-words`, `img{max-w-full h-auto}`, `pre{overflow/줄바꿈+다크박스}`, 인라인 `:not(pre)>code`, `table{block w-max max-w-full overflow-x-auto}`, prose 컨테이너(flex 자식) `min-w-0`.
 - **코드블록 스타일은 CSS로 이식**(BBlog는 `CodeBlock` 컴포넌트/rehype-react지만 ts-trender는 문자열-HTML). `pre code`: `text-2xs lg:text-sm whitespace-pre-wrap break-all`(모바일 10px, 줄바꿈). highlight.js 다크테마와 겹치면 **소스 순서/특이도**로 오버라이드(배경 transparent, 구문색 유지). BBlog `.prose` CSS는 이것 말고는 ts-trender와 동일.
 - **⚠️ Turbopack `.next` stale CSS**: dev가 `globals.css` 수정 후에도 옛 CSS 청크(같은 이름, 옛 내용)를 계속 서빙 → HMR·재시작으로도 안 되고 **`.next` 비워야** 반영. `rm -rf` 차단 환경이면 `mv .next` 로 레포 밖 이동 후 재기동(`.gitignore`는 `.next`만 무시하니 이동 위치 주의). globals.css 수정이 화면에 안 보이면 이걸 먼저 의심.
+
+## Next 캐시 / 수동 revalidate (2026-07-02, 상세 `docs/history/2026-07-02-per-page-revalidate-button.md`)
+
+- **Next 16.2.9 캐시 API가 바뀜**: `revalidateTag(tag)` 단일인자는 **deprecated 경고 + tsc 타입에러**(2번째 `profile` 인자 요구). **서버액션에선 `updateTag(tag)`**(단일인자, 즉시 만료 + read-your-own-writes, 경고 없음), 그 외(route handler 등)에선 `revalidateTag(tag,'max')`. `updateTag`는 route handler/비-action에서 throw. `unstable_cache({tags})` 레거시 태그도 `encodeCacheTag` 동일 경로라 함께 purge됨.
+- **페이지별 캐시 계층이 다름**(버튼/무효화 시 반드시 구분): 리스트 `/article`·`/vendor/[vendor]`(`loadArticles`)·`/report`(`listReportsCached`)는 **`unstable_cache` 태그**(`articles`/`reports`) → 태그 purge가 핵심. 홈·`/vendor/report/[kind]`·상세(`/article/[id]`·`/report/[id]`)는 **직접 repo + page ISR**(`export const revalidate`) → 경로 purge가 핵심. `/bookmarks`는 `force-dynamic`(캐시 없음).
+- **수동 revalidate 패턴**: 서버액션 `revalidatePageCache({path,tags})`(`lib/revalidate.action.ts`) + 클라 버튼(`features/common/revalidate-button.tsx`) → 액션 후 **`router.refresh()`**로 RSC 재실행·리스트 재하이드레이션. 리스트는 react-query가 서버액션을 queryFn으로 쓰므로 태그 purge 후 refresh면 신선.
+- **`revalidatePath`는 dynamic 문법(`[param]`) 경로를 type 없이 주면 무효+경고** → 해석된 구체 경로(`/article/123`)를 넘긴다.
+- **guard-commit.sh 오탐**: PreToolUse 훅이 **Bash 명령 문자열 전체**를 `co-authored-by|generated with|claude <|noreply@anthropic`로 스캔 → `git commit`과 검증용 `grep "...generated with..."`를 **한 호출에 합치면** 그 리터럴 때문에 차단. **커밋은 단독 명령**, 트레일러 검증은 별도 `git log|grep`(훅 대상 아님)로.
+
+## 리포트 크론 / 수동 생성 (2026-07-02, 상세 `docs/history/2026-07-02-per-page-revalidate-button.md`)
+
+- **Vercel 크론은 UTC.** `vercel.json`: daily `0 20 * * *`(=KST 05:00), weekly `0 16 * * 0`(=KST 월 01:00), crawl `0 * * * *`(매시). KST로 환산할 땐 +9h. 크론은 워크플로를 **트리거만** 하고, 리포트 행 `created_at`은 생성 완료 시각(언어/벤더 8조합 순차라 몇 분 편차).
+- **daily 리포트 = 트리거 시점 직전 24h.** `generateReport(kind, vendor, lang, now=new Date())`: `since=now-24h`, period `[toDate(since), toDate(now)]`(UTC 날짜), title `(toDate(now))`. `new Date().toISOString()`은 머신 tz 무관 UTC라 로컬 실행도 프로덕션과 같은 period 산출.
+- **수동 생성**: 워크플로 런타임 안 띄우고 `generateReport('daily'|'weekly', vendor, lang)`를 8조합(general ko/ja/en + vendor{openai,anthropic,google,naver,kakao} ko) 루프로 직접 호출하면 `reportWorkflow`와 동일. `skipIfExists=true`(기본) + `insertReport`의 **scoped delete-then-insert**(같은 kind/lang/vendor/period만) = 멱등, 승인된 경로(레거시 DB raw DELETE 금지와 무관). codex rate-limit은 `isCodexLimit(error)`(`CODEX_LIMIT` prefix)로 감지해 중단.
+- **⚠️ `getArticlesForPeriod` tz 함정**: 필터가 `gte(articles.fetchedAt, since)` — `fetched_at`은 DB 세션 KST인데 `since`는 UTC 유도 문자열 → **9h 어긋난 윈도우**(프로덕션 워크플로도 동일). 벤더 스킵("no articles") 판정·검증은 반드시 **함수와 같은 `fetched_at(KST) >= since`** 로 확인(UTC 기준 `coalesce(published,fetched-9h)`로 짜면 결과 불일치). (리포트 period tz 정합은 별도 미결 과제.)
+- 새로 생성/백필한 리포트는 site 캐시(`/report`=`reports` 태그, 홈·벤더리포트=page ISR) 만료 전엔 안 보임 → revalidate 버튼(위 "Next 캐시" 섹션)으로 즉시 반영.
