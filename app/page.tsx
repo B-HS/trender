@@ -2,6 +2,7 @@ export const revalidate = 1800
 
 import { getDailyVendorReports, getLatestDailyReports } from '@entities/report/report.repo'
 import { ReportCard } from '@features/report/report-card'
+import { RevalidateButton } from '@features/common/revalidate-button'
 import { CARD_GRID } from '@lib/constants'
 import Link from 'next/link'
 
@@ -22,6 +23,9 @@ const Home = async () => {
 
     return (
         <div className='flex flex-col gap-8 py-2'>
+            <div className='flex justify-end'>
+                <RevalidateButton path='/' />
+            </div>
             <Section title='일반 리포트' href='/report'>
                 {general.length > 0 ? (
                     <div className={CARD_GRID}>

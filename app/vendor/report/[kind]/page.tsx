@@ -1,6 +1,7 @@
 export const revalidate = 1800
 
 import { listVendorReports } from '@entities/report/report.repo'
+import { PageHeader } from '@features/common/page-header'
 import { ReportCard } from '@features/report/report-card'
 import { CARD_GRID } from '@lib/constants'
 import { notFound } from 'next/navigation'
@@ -13,7 +14,7 @@ const Page = async ({ params }: { params: Promise<{ kind: string }> }) => {
 
     return (
         <div className='flex flex-col gap-3'>
-            <h1 className='text-2xl font-bold'>{kind === 'daily' ? '일일' : '주간'} 기업 리포트</h1>
+            <PageHeader title={`${kind === 'daily' ? '일일' : '주간'} 기업 리포트`} revalidatePath={`/vendor/report/${kind}`} />
             {reports.length > 0 ? (
                 <div className={CARD_GRID}>
                     {reports.map((r) => (

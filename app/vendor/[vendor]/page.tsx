@@ -1,6 +1,7 @@
 import { loadArticles } from '@entities/article/article.action'
 import { VENDOR_LABEL, VENDOR_ORDER, QUERY_KEY } from '@lib/constants'
 import { ArticleSearch } from '@features/article/article-search'
+import { PageHeader } from '@features/common/page-header'
 import { ArticleList } from '@widgets/article/article-list'
 import { getQueryClient } from '@lib/get-query-client'
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query'
@@ -23,7 +24,11 @@ const Page = async ({ params, searchParams }: { params: Promise<{ vendor: string
 
     return (
         <div className='flex flex-col gap-3'>
-            <h1 className='text-2xl font-bold'>{VENDOR_LABEL[vendor as keyof typeof VENDOR_LABEL]}</h1>
+            <PageHeader
+                title={VENDOR_LABEL[vendor as keyof typeof VENDOR_LABEL]}
+                revalidatePath={`/vendor/${vendor}`}
+                revalidateTags={['articles']}
+            />
             <Suspense>
                 <ArticleSearch showLang={false} />
             </Suspense>

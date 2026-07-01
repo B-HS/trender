@@ -3,6 +3,7 @@ export const revalidate = 600
 import { getReport, getReportItems } from '@entities/report/report.repo'
 import { BookmarkButton } from '@features/common/bookmark-button'
 import { ContentView } from '@features/common/content-view'
+import { RevalidateButton } from '@features/common/revalidate-button'
 import { linkifyCitations } from '@lib/citations'
 import { VENDOR_LABEL } from '@lib/constants'
 import { Badge } from '@ui/badge'
@@ -31,7 +32,10 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 </div>
                 <div className='flex items-start justify-between gap-2'>
                     <h1 className='text-2xl font-extrabold tracking-tight'>{report.title}</h1>
-                    <BookmarkButton targetType='report' targetId={report.id} className='mt-1 shrink-0' />
+                    <div className='mt-1 flex shrink-0 items-center'>
+                        <RevalidateButton path={`/report/${report.id}`} />
+                        <BookmarkButton targetType='report' targetId={report.id} />
+                    </div>
                 </div>
             </header>
             <ContentView content={markdown} />

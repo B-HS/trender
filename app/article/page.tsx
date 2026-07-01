@@ -1,6 +1,7 @@
 import { loadArticles } from '@entities/article/article.action'
 import { listSourceOptions } from '@entities/article/article.repo'
 import { ArticleSearch } from '@features/article/article-search'
+import { PageHeader } from '@features/common/page-header'
 import { ArticleList } from '@widgets/article/article-list'
 import { QUERY_KEY } from '@lib/constants'
 import { getQueryClient } from '@lib/get-query-client'
@@ -35,7 +36,7 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ q?: string; lang
 
     return (
         <div className='flex flex-col gap-3 py-2'>
-            <h1 className='text-2xl font-bold'>기사</h1>
+            <PageHeader title='기사' revalidatePath='/article' revalidateTags={['articles']} />
             <Suspense>
                 <ArticleSearch sources={sources} />
             </Suspense>

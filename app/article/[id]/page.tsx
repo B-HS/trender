@@ -1,6 +1,7 @@
 import { getArticle } from '@entities/article/article.repo'
 import { BookmarkButton } from '@features/common/bookmark-button'
 import { ContentToggle } from '@features/common/content-toggle'
+import { RevalidateButton } from '@features/common/revalidate-button'
 import { VENDOR_LABEL } from '@lib/constants'
 import { formatKstDate } from '@lib/date'
 import { renderContent } from '@lib/render/content'
@@ -46,6 +47,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                         원문 보기
                     </a>
                     <BookmarkButton targetType='article' targetId={article.id} />
+                    <RevalidateButton path={`/article/${article.id}`} className='ml-auto' />
                 </div>
             </header>
             <ContentToggle

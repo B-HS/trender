@@ -1,4 +1,5 @@
 import { listReportsCached } from '@entities/report/report.cache'
+import { PageHeader } from '@features/common/page-header'
 import { ReportCard } from '@features/report/report-card'
 import { ReportFilter } from '@features/report/report-filter'
 import { CARD_GRID } from '@lib/constants'
@@ -14,7 +15,7 @@ const Page = async ({ searchParams }: { searchParams: Promise<{ kind?: string; l
 
     return (
         <div className='flex flex-col gap-3 py-2'>
-            <h1 className='text-2xl font-bold'>리포트</h1>
+            <PageHeader title='리포트' revalidatePath='/report' revalidateTags={['reports']} />
             <Suspense>
                 <ReportFilter />
             </Suspense>
