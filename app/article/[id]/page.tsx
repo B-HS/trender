@@ -1,6 +1,6 @@
 import { getArticle } from '@entities/article/article.repo'
+import { MarkViewed } from '@features/article/mark-viewed'
 import { BookmarkButton } from '@features/common/bookmark-button'
-import { ContentToggle } from '@features/common/content-toggle'
 import { RevalidateButton } from '@features/common/revalidate-button'
 import { VENDOR_LABEL } from '@lib/constants'
 import { formatKstDate } from '@lib/date'
@@ -18,10 +18,11 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     const article = await getArticle(Number(id))
     if (!article) notFound()
 
-    const [originalHtml, translatedHtml] = await Promise.all([renderContent(article.contentOriginal), renderContent(article.contentTranslatedKo)])
+    const originalHtml = await renderContent(article.contentOriginal)
 
     return (
         <article className='flex flex-col gap-4 py-2 max-w-3xl mx-auto'>
+            <MarkViewed articleId={article.id} />
             <header className='flex flex-col gap-2'>
                 <div className='flex items-center gap-1.5 text-sm text-muted-foreground'>
                     {article.vendor && <Badge className='rounded-xs px-1 shrink-0'>{VENDOR_LABEL[article.vendor]}</Badge>}
@@ -50,12 +51,12 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                     <RevalidateButton path={`/article/${article.id}`} className='ml-auto' />
                 </div>
             </header>
-            <ContentToggle
-                originalTitle={decodeEntities(article.titleOriginal)}
-                translatedTitle={article.titleTranslatedKo ? decodeEntities(article.titleTranslatedKo) : null}
-                originalHtml={originalHtml}
-                translatedHtml={translatedHtml}
-            />
+            <h1 className='text-2xl font-extrabold tracking-tight'>{decodeEntities(article.titleOriginal)}</h1>
+            {originalHtml ? (
+                <div className='prose min-w-0 max-w-none' dangerouslySetInnerHTML={{ __html: originalHtml }} />
+            ) : (
+                <p className='text-muted-foreground'>본문이 없습니다.</p>
+            )}
         </article>
     )
 }

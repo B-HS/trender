@@ -1,9 +1,9 @@
 export const revalidate = 1800
 
-import { getDailyVendorReports, getLatestDailyReports } from '@entities/report/report.repo'
-import { ReportCard } from '@features/report/report-card'
+import { listArticles } from '@entities/article/article.repo'
+import { ArticleCard } from '@features/article/article-card'
 import { RevalidateButton } from '@features/common/revalidate-button'
-import { CARD_GRID } from '@lib/constants'
+import { CARD_GRID, LANG_OPTIONS } from '@lib/constants'
 import Link from 'next/link'
 
 const Section = ({ title, href, children }: { title: string; href: string; children: React.ReactNode }) => (
@@ -19,36 +19,31 @@ const Section = ({ title, href, children }: { title: string; href: string; child
 )
 
 const Home = async () => {
-    const [general, vendor] = await Promise.all([getLatestDailyReports('none', 6), getDailyVendorReports(6)])
+    const sections = await Promise.all(
+        LANG_OPTIONS.map(async (option) => ({
+            ...option,
+            articles: await listArticles({ vendor: 'none', lang: option.value, limit: 3 }),
+        })),
+    )
 
     return (
         <div className='flex flex-col gap-8 py-2'>
             <div className='flex justify-end'>
                 <RevalidateButton path='/' />
             </div>
-            <Section title='일반 리포트' href='/report'>
-                {general.length > 0 ? (
-                    <div className={CARD_GRID}>
-                        {general.map((r) => (
-                            <ReportCard key={r.id} report={r} />
-                        ))}
-                    </div>
-                ) : (
-                    <p className='text-muted-foreground text-sm'>아직 생성된 일반 리포트가 없습니다.</p>
-                )}
-            </Section>
-
-            <Section title='기업 리포트' href='/vendor/report/daily'>
-                {vendor.length > 0 ? (
-                    <div className={CARD_GRID}>
-                        {vendor.map((r) => (
-                            <ReportCard key={r.id} report={r} />
-                        ))}
-                    </div>
-                ) : (
-                    <p className='text-muted-foreground text-sm'>아직 생성된 기업 리포트가 없습니다.</p>
-                )}
-            </Section>
+            {sections.map((section) => (
+                <Section key={section.value} title={`${section.label} 기사`} href={`/article?lang=${section.value}`}>
+                    {section.articles.length > 0 ? (
+                        <div className={CARD_GRID}>
+                            {section.articles.map((article) => (
+                                <ArticleCard key={article.id} article={article} />
+                            ))}
+                        </div>
+                    ) : (
+                        <p className='text-muted-foreground text-sm'>아직 수집된 기사가 없습니다.</p>
+                    )}
+                </Section>
+            ))}
         </div>
     )
 }

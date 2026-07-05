@@ -9,7 +9,6 @@ import { usePathname } from 'next/navigation'
 import { FC } from 'react'
 
 const NAVS = [
-    { href: '/report', label: '리포트' },
     { href: '/article', label: '기사' },
     { href: '/vendor', label: '기업' },
 ] as const
