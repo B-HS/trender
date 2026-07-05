@@ -77,6 +77,22 @@ DB(데이터, 미커밋): `app_locks` 추가(0003 SQL 직접 적용 — **db:pus
 - [x] 리포트 크론 시각 변경(`vercel.json`) — Vercel 크론은 UTC. daily `0 23`→**`0 20`**(KST 08→05시), weekly `0 22 * * 0`→**`0 16 * * 0`**(KST 월 07→01시).
 - [x] 오늘 daily 리포트 수동 생성 — period 06-30→07-01 **6건**(758~763, general ko/ja/en + openai/anthropic/google). naver/kakao는 윈도우 내 기사 0건이라 스킵(정상). DB 데이터라 미커밋.
 
+## 13. 리포트 생성 중단 원인 + AI 기능 off·읽음 표시 (2026-07-05 ~ 07-06)
+
+> 7/3 KST 새벽 이후 리포트 미생성 원인: **Vercel env `CODEX_AUTH`의 refresh_token 무효화**. OpenAI OAuth는 refresh token 회전 방식 — 로컬 codex CLI가 7/2 23:48 UTC refresh 하면서 env에 박힌 예전 refresh_token이 `refresh_token_reused`(401)로 폐기됨. `refreshAccessToken`도 새 refresh_token을 영속화하지 않는 구조적 문제. → 사용자 결정: 복구 대신 **AI 기능(번역·리포트) 일단 off**.
+
+- [x] 리포트 메뉴 invisible — 헤더 NAVS에서 `/report` 제거(페이지·라우트 코드는 유지, 직접 URL 접근은 가능). 벤더 사이드바의 일일/주간 리포트 링크는 지시 범위 밖이라 유지.
+- [x] 번역 UI invisible — 기사 상세에서 `ContentToggle` 제거, 원문만 렌더. 테이블 컬럼(`title_translated_ko` 등)·`content-toggle.tsx`·`use-translation-preference.ts` 파일은 복구 대비 유지(미사용). repo의 번역제목 검색 조건도 유지.
+- [x] 번역/AI workflow 정지 — `workflows/crawl.ts`에서 enrich(번역+키워드) 스텝 전부 제거, 크롤링만 남김. `vercel.json`에서 report daily/weekly 크론 제거(crawl `0 * * * *`만). `lib/ai/*`·`workflows/report.ts`·`/api/cron/report` 라우트는 유지. **신규 기사는 키워드도 더 이상 추출 안 됨.**
+- [x] 사용자별 읽음 표시 — 새 테이블 `article_views`(user_id·article_id·viewed_at, uniq(user,article), FK cascade). 라이브 DB에 SQL 직접 적용(`drizzle/0004_article_views.sql`, db:push 체계라 migrate 안 씀).
+  - `entities/view/view.repo.ts`(markArticleViewed 멱등 upsert / listViewedArticleIds) + `/api/views`(GET ids, POST mark, 비로그인 무시).
+  - `article.client.ts`: `useViewedIds` + `useMarkViewed`(onMutate 낙관적 캐시 추가). `QUERY_KEY.VIEW.IDS`.
+  - `article-card.tsx`(client 전환): 읽음이면 카드 `opacity-55 hover:opacity-100 bg-muted/40` + 날짜 옆 `CheckCheck` "읽음" 뱃지. 제목 클릭 시 즉시 mark(낙관적).
+  - `features/article/mark-viewed.tsx`: 상세 페이지 마운트 시 mark(직접 URL 진입 커버, `useRef` 1회 가드). 상세는 full route cache 공유라 서버에서 못 하고 클라이언트 기록이 정석.
+- [x] 루트 페이지 개편 — 일반/기업 리포트 섹션 제거 → **한국어/日本語/English 기사 각 3개**(`listArticles({vendor:'none', lang, limit:3})`), 더보기 → `/article?lang=xx`.
+- 검증: `tsc` 0 · `next build` 통과 · 로컬 프로덕션 서버에서 로그인→기사 클릭→읽음 dim/뱃지, 라이트·다크 모두 확인 · `/api/views` 멱등 E2E(테스트 유저는 삭제).
+- 미커밋(사용자 요청 대기). DB에는 `article_views` 테이블 이미 적용됨.
+
 ## 검증 필요 시점
 
 - 각 구현 단위마다 사용자에게 테스트 요청 (테스트는 사용자가 직접 수행)
