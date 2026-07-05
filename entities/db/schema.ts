@@ -173,6 +173,27 @@ export const favorites = mysqlTable(
     ],
 )
 
+export const articleViews = mysqlTable(
+    'article_views',
+    {
+        id: bigint({ mode: 'number' }).autoincrement().notNull(),
+        userId: varchar('user_id', { length: 36 })
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        articleId: bigint('article_id', { mode: 'number' })
+            .notNull()
+            .references(() => articles.id, { onDelete: 'cascade' }),
+        viewedAt: timestamp('viewed_at', { mode: 'string' })
+            .default(sql`(now())`)
+            .notNull(),
+    },
+    (table) => [
+        index('idx_view_user').on(table.userId),
+        primaryKey({ columns: [table.id], name: 'article_views_id' }),
+        unique('uniq_view_user_article').on(table.userId, table.articleId),
+    ],
+)
+
 export const appLocks = mysqlTable(
     'app_locks',
     {

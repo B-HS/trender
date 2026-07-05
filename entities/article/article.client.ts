@@ -24,6 +24,32 @@ export const useFavoriteIds = (targetType: 'article' | 'report') =>
         },
     })
 
+export const useViewedIds = () =>
+    useQuery<number[]>({
+        queryKey: QUERY_KEY.VIEW.IDS,
+        queryFn: async () => {
+            const res = await fetch('/api/views')
+            const data = (await res.json()) as { ids: number[] }
+            return data.ids
+        },
+    })
+
+export const useMarkViewed = () => {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async (articleId: number) => {
+            await fetch('/api/views', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ articleId }),
+            })
+        },
+        onMutate: (articleId) => {
+            queryClient.setQueryData<number[]>(QUERY_KEY.VIEW.IDS, (prev) => (prev?.includes(articleId) ? prev : [...(prev ?? []), articleId]))
+        },
+    })
+}
+
 export const useToggleFavorite = (targetType: 'article' | 'report') => {
     const queryClient = useQueryClient()
     return useMutation({

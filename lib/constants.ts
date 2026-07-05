@@ -4,6 +4,7 @@ export const QUERY_KEY = {
         LIST: (vendor: string, q: string, lang: string, source: string, period: string) => ['article', 'list', vendor, q, lang, source, period],
     },
     FAVORITE: { IDS: (targetType: string) => ['favorite', 'ids', targetType] },
+    VIEW: { IDS: ['view', 'ids'] },
 }
 
 export const VENDOR_LABEL = {
