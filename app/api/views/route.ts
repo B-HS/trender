@@ -13,7 +13,7 @@ export const GET = async () => {
 
 export const POST = async (request: Request) => {
     const user = await getCurrentUser()
-    if (!user) return NextResponse.json({ ok: false })
+    if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     const parsed = schema.safeParse(await request.json())
     if (!parsed.success) return NextResponse.json({ error: 'invalid body' }, { status: 400 })
     await markArticleViewed(user.id, parsed.data.articleId)
