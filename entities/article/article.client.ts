@@ -38,20 +38,27 @@ export const useMarkViewed = () => {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: async (articleId: number) => {
-            await fetch('/api/views', {
+            const res = await fetch('/api/views', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ articleId }),
             })
+            if (!res.ok) throw new Error('view failed')
         },
         onMutate: (articleId) => {
-            queryClient.setQueryData<number[]>(QUERY_KEY.VIEW.IDS, (prev) => (prev?.includes(articleId) ? prev : [...(prev ?? []), articleId]))
+            const prev = queryClient.getQueryData<number[]>(QUERY_KEY.VIEW.IDS)
+            queryClient.setQueryData<number[]>(QUERY_KEY.VIEW.IDS, (d) => (d?.includes(articleId) ? d : [...(d ?? []), articleId]))
+            return { prev }
+        },
+        onError: (_e, _v, ctx) => {
+            if (ctx?.prev) queryClient.setQueryData(QUERY_KEY.VIEW.IDS, ctx.prev)
         },
     })
 }
 
 export const useToggleFavorite = (targetType: 'article' | 'report') => {
     const queryClient = useQueryClient()
+    const idsKey = QUERY_KEY.FAVORITE.IDS(targetType)
     return useMutation({
         mutationFn: async ({ targetId, active }: { targetId: number; active: boolean }) => {
             const res = await fetch('/api/favorites', {
@@ -61,6 +68,16 @@ export const useToggleFavorite = (targetType: 'article' | 'report') => {
             })
             if (!res.ok) throw new Error('favorite failed')
         },
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY.FAVORITE.IDS(targetType) }),
+        onMutate: ({ targetId, active }) => {
+            const prev = queryClient.getQueryData<number[]>(idsKey)
+            queryClient.setQueryData<number[]>(idsKey, (d) =>
+                active ? (d?.includes(targetId) ? d : [...(d ?? []), targetId]) : (d ?? []).filter((x) => x !== targetId),
+            )
+            return { prev }
+        },
+        onError: (_e, _v, ctx) => {
+            if (ctx?.prev) queryClient.setQueryData(idsKey, ctx.prev)
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: idsKey }),
     })
 }
