@@ -93,6 +93,16 @@ DB(데이터, 미커밋): `app_locks` 추가(0003 SQL 직접 적용 — **db:pus
 - 검증: `tsc` 0 · `next build` 통과 · 로컬 프로덕션 서버에서 로그인→기사 클릭→읽음 dim/뱃지, 라이트·다크 모두 확인 · `/api/views` 멱등 E2E(테스트 유저는 삭제).
 - 미커밋(사용자 요청 대기). DB에는 `article_views` 테이블 이미 적용됨.
 
+## 14. GeekNews 본문 410 복구 + 북마크·열람 보강 (2026-09-11)
+
+> 발단: GeekNews 본문 미노출 보고. CSR 의심 → 라이브 검증으로 **`.md` 엔드포인트 410 영구 폐지**가 원인 확정(요약 폴백으로 얇은 본문 저장). 상세: `docs/history/2026-09-11-hada-md-410-and-bookmark-viewed.md`.
+
+- [x] provider 전환 — geeknews `createMdProvider`→`createArticleProvider`(상세 `topic?id=` SSR, `#topic_contents`). 죽은 `feed+md` strategy/팩토리 제거. 라이브 스모크로 전문 확보 확인.
+- [x] 열람 보강 — `/api/views` 미인증 401, `useMarkViewed` `res.ok`+롤백(서버 실패 시 '읽음' 영구화 버그 수정), upsert `viewedAt` 갱신.
+- [x] 북마크 보강 — `useToggleFavorite` 낙관적 토글+롤백, GET `targetType` zod 검증, `/bookmarks` 해제 시 카드 즉시 제거(`bookmarks-list.tsx`).
+- [x] 문서 갱신 — parsing/geeknews·README·sources 410/`#topic_contents` 반영, memory 함정 추가.
+- [x] 검증 — `bun test` 9/9 · `tsc` 0 · prettier. 빌드 prerender 실패는 로컬 DB 부재(무관). **schema 무변경 → `db:push` 불필요.** 얇게 저장된 기존 geeknews 행 백필은 대기(필요 시 `docs/utils/backfill/` 패턴).
+
 ## 검증 필요 시점
 
 - 각 구현 단위마다 사용자에게 테스트 요청 (테스트는 사용자가 직접 수행)

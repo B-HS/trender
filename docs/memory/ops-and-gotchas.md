@@ -89,3 +89,9 @@
 - **수동 생성**: 워크플로 런타임 안 띄우고 `generateReport('daily'|'weekly', vendor, lang)`를 8조합(general ko/ja/en + vendor{openai,anthropic,google,naver,kakao} ko) 루프로 직접 호출하면 `reportWorkflow`와 동일. `skipIfExists=true`(기본) + `insertReport`의 **scoped delete-then-insert**(같은 kind/lang/vendor/period만) = 멱등, 승인된 경로(레거시 DB raw DELETE 금지와 무관). codex rate-limit은 `isCodexLimit(error)`(`CODEX_LIMIT` prefix)로 감지해 중단.
 - **⚠️ `getArticlesForPeriod` tz 함정**: 필터가 `gte(articles.fetchedAt, since)` — `fetched_at`은 DB 세션 KST인데 `since`는 UTC 유도 문자열 → **9h 어긋난 윈도우**(프로덕션 워크플로도 동일). 벤더 스킵("no articles") 판정·검증은 반드시 **함수와 같은 `fetched_at(KST) >= since`** 로 확인(UTC 기준 `coalesce(published,fetched-9h)`로 짜면 결과 불일치). (리포트 period tz 정합은 별도 미결 과제.)
 - 새로 생성/백필한 리포트는 site 캐시(`/report`=`reports` 태그, 홈·벤더리포트=page ISR) 만료 전엔 안 보임 → revalidate 버튼(위 "Next 캐시" 섹션)으로 즉시 반영.
+
+## GeekNews 크롤링 함정 (2026-09-11, 상세 `docs/history/2026-09-11-hada-md-410-and-bookmark-viewed.md`)
+
+- **hada `.md` 엔드포인트 410 영구 폐지**: `/topic/{id}.md` → `410 Gone`("Markdown is no longer available"). 본문은 상세 `topic?id={id}` SSR HTML의 **`#topic_contents`**(`itemprop=articleBody`). 댓글은 `#comment_thread`로 컨테이너 밖이라 셀렉터로 자동 제외. `feed+md`로 되돌리지 말 것.
+- **⚠️ UA gate**: news.hada.io는 브라우저 UA 없는 요청(기본 node/curl UA)에 상세·피드 모두 **`403` text/plain** 반환. `lib/crawl/fetch.ts` DEFAULT_HEADERS(Chrome UA)로 200 확인. fetch 실패 시 runner가 조용히 피드 요약(~100자)으로 폴백하므로 **본문이 갑자기 얇아지면 status code 먼저 확인**.
+- Atom 피드 `<link rel=alternate href>`가 곧 `topic?id=` URL → `createArticleProvider`가 fetchBody URL로 그대로 재사용 가능(id 파싱 불필요).
