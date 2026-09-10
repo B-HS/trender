@@ -8,8 +8,9 @@ const schema = z.object({ targetType: z.enum(['article', 'report']), targetId: z
 export const GET = async (request: Request) => {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ ids: [] })
-    const targetType = (new URL(request.url).searchParams.get('targetType') ?? 'article') as 'article' | 'report'
-    return NextResponse.json({ ids: await listFavoriteIds(user.id, targetType) })
+    const parsed = z.enum(['article', 'report']).safeParse(new URL(request.url).searchParams.get('targetType') ?? 'article')
+    if (!parsed.success) return NextResponse.json({ error: 'invalid targetType' }, { status: 400 })
+    return NextResponse.json({ ids: await listFavoriteIds(user.id, parsed.data) })
 }
 
 export const POST = async (request: Request) => {
