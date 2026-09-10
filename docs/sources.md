@@ -10,7 +10,7 @@
 | Zenn (llm) | `https://zenn.dev/topics/llm/feed` | ja | | rss(+api 옵션) | ai/llm 중복은 url dedup. |
 | Qiita (ai) | API v2 `https://qiita.com/api/v2/items?query=tag:ai stocks:>N` | ja | | api | ⚠️ `likes_count:>N` 무효 → **`stocks:>N`** 사용. `rendered_body`/`body` 전문 inline. anon 60/hr·토큰 1000/hr. RSS 폐기. |
 | Qiita (llm) | API v2 `query=tag:llm stocks:>N` | ja | | api | 〃 |
-| GeekNews(긱뉴스) | `https://news.hada.io/rss/news` | ko | | rss(+`.md`) | 본문은 `/topic/{id}.md`(전문+댓글). 외부링크라 기사 도메인 다양. |
+| GeekNews(긱뉴스) | `https://news.hada.io/rss/news` | ko | | rss+article | 본문은 상세 `topic?id={id}` 의 `#topic_contents`(전문 HTML). `.md` 엔드포인트 410 폐지(2026-09-11). UA gate 있음(브라우저 UA 필수). |
 | AI타임스 | `https://www.aitimes.com/rss/allArticle.xml` | ko | | rss+article | CF 아님. |
 | OpenAI | `https://openai.com/news/rss.xml` | en | openai | rss+article | ⚠️ 본문 기사 **CF 403**(로컬 검증 환경). 피드 정상. Vercel egress 통과 여부 확인 필요 → 실패 시 description fallback. |
 | Anthropic | `https://raw.githubusercontent.com/tim-hilde/anthropic-rss/main/docs/rss.xml` | en | anthropic | full | 원본 `/news/rss.xml` 404 → tim-hilde 스크래퍼(claude.com/blog, 전문). 죽으면 알림. |
@@ -45,4 +45,4 @@
 - `api`: 전용 JSON API (Zenn/Qiita)
 - `full`: 피드에 전문(content:encoded) 포함 → 본문 추가 fetch 불필요
 - `rss+article`: 피드는 목록/요약, 본문은 기사 URL 재fetch 후 추출
-- `+.md`: GeekNews `/topic/{id}.md`
+- ~~`+.md`: GeekNews `/topic/{id}.md`~~ → 410 폐지(2026-09-11), `rss+article`(`#topic_contents`)로 전환

@@ -10,7 +10,7 @@
 | `feed-full` | 피드에 전문 포함 → 본문 추가 fetch 불필요 | Anthropic(`<description>`), 요즘IT(`content:encoded`), MarkTechPost(`content:encoded`), Simon Willison(`<summary type=html>`), Raschka(`content:encoded`, 유료글 truncate), Naver D2(`<content>`) |
 | `api` | 전용 JSON API | Zenn(`/api/articles/{slug}`→`body_html`), Qiita(`/api/v2/items` `rendered_body`/`body` inline) |
 | `feed+article` | 피드는 목록, 본문은 기사 URL 재fetch + 셀렉터 | ITmedia(`#ArticleText`), Publickey(`div.entrybody`), AITimes(`#article-view-content-div`), OpenAI, HuggingFace(`div.blog-content`), DeepMind(`div.rich-text`), Google Research(`div.rich-text`) |
-| `feed+md` | hada `.md` 엔드포인트 | GeekNews(`/topic/{id}.md`) |
+| `feed+article` | hada 상세 페이지 SSR (`#topic_contents`) | GeekNews(`/topic?id={id}`) — `.md` 엔드포인트 410 폐지(2026-09-11) |
 | `feed-only(thin)` | 본문 확보 불가 → 피드 요약만 | KakaoTech(SPA, ~258자) |
 | `aggregator` | 외부 임의 도메인 → per-domain + readability fallback, 실패 시 skip | はて브 hotentry |
 
@@ -24,7 +24,7 @@
 6. **Raschka 유료글 truncate** — "Read more" teaser 로 끝남 → flag/skip.
 7. **Naver D2 기사 페이지는 Vue SPA** 지만 Atom `<content>` 에 본문 포함 → 페이지 fetch 불필요. 슬라이드/iframe 전용 글은 본문 얇음.
 8. **KakaoTech 확정** — Nuxt SPA, JSON-LD `articleBody` 부재, 정적 HTML 은 chrome 뿐. 사용 가능 본문 = 피드 `description` ~258자. 전문은 headless 또는 내부 API 필요(추후).
-9. **GeekNews 피드는 Atom**, topic id 는 `<id>`/`<link>`의 `?id=` 에서 추출. `.md` 18KB 정상.
+9. **GeekNews 피드는 Atom**, topic id 는 `<id>`/`<link>`의 `?id=` 에서 추출. `.md` 엔드포인트는 **410 폐지** → 본문은 상세 페이지 `#topic_contents` (UA gate: 브라우저 UA 없으면 403).
 10. **요즘IT 피드에 per-item 날짜/저자 없음** → published_at fallback(ingest time).
 
 ## 인코딩/공통 처리
