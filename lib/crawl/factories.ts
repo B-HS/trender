@@ -75,18 +75,6 @@ export const createThinFeedProvider = (cfg: FeedConfig): Provider => ({
     list: async () => (await listFromFeed(cfg)()).map((item) => ({ ...item, content: item.summary })),
 })
 
-export const createMdProvider = (cfg: FeedConfig & { mdBase: string }): Provider => ({
-    ...baseFromConfig(cfg),
-    strategy: 'feed+md',
-    list: listForceBody(cfg),
-    fetchBody: async (item) => {
-        const guid = String(item.extra?.guid ?? '')
-        const id = /[?&]id=(\d+)/.exec(guid)?.[1] ?? /\/(\d+)(?:[/?#]|$)/.exec(guid)?.[1] ?? /[?&]id=(\d+)/.exec(item.url)?.[1]
-        if (!id) return item.summary ?? null
-        return fetchText(`${cfg.mdBase}/${id}.md`)
-    },
-})
-
 export const createAggregatorProvider = (cfg: FeedConfig & { selectors: string[] }): Provider => ({
     ...baseFromConfig(cfg),
     strategy: 'aggregator',

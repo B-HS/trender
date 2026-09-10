@@ -1,5 +1,5 @@
 import type { Provider } from './provider.type'
-import { createAggregatorProvider, createArticleProvider, createFeedFullProvider, createMdProvider } from '@lib/crawl/factories'
+import { createAggregatorProvider, createArticleProvider, createFeedFullProvider } from '@lib/crawl/factories'
 import { createZennProvider } from './providers/zenn'
 import { createQiitaProvider } from './providers/qiita'
 import { createKakaoProvider } from './providers/kakaotech'
@@ -10,12 +10,13 @@ export const PROVIDERS: Provider[] = [
     createQiitaProvider('ai'),
     createQiitaProvider('llm'),
 
-    createMdProvider({
+    // hada .md 엔드포인트는 410 폐지됨 — 상세 페이지 SSR HTML의 #topic_contents 가 본문 컨테이너
+    createArticleProvider({
         id: 'geeknews',
         name: 'GeekNews',
         lang: 'ko',
         feedUrl: 'https://news.hada.io/rss/news',
-        mdBase: 'https://news.hada.io/topic',
+        selectors: ['#topic_contents', '[itemprop="articleBody"]'],
     }),
     createArticleProvider({
         id: 'aitimes',

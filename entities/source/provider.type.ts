@@ -3,7 +3,7 @@ import { LANGS, VENDORS } from '@entities/db/schema'
 export type Lang = (typeof LANGS)[number]
 export type Vendor = (typeof VENDORS)[number]
 
-export type Strategy = 'feed-full' | 'api' | 'feed+article' | 'feed+md' | 'feed-only' | 'aggregator'
+export type Strategy = 'feed-full' | 'api' | 'feed+article' | 'feed-only' | 'aggregator'
 
 export type RawListItem = {
     url: string
